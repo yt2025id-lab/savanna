@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build output
+contracts/out/
+contracts/cache/
+contracts/broadcast/*/31337/
+contracts/broadcast/**/dry-run/
+frontend/.next/
+
+# Foundry libraries (too large, use git submodule or forge install)
+contracts/lib/
+
+# Environment variables
+contracts/.env
+frontend/.env
+frontend/.env.local
+**/.env
+!**/.env.example
+
+# Claude Code logs
+*.txt
+contracts/2026-*.txt
+frontend/2026-*.txt*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Logs
+*.log
+npm-debug.log*
