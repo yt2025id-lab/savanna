@@ -7,13 +7,13 @@ import { Footer } from "@/components/Footer";
 
 export default function Home() {
   return (
-    <>
+    <main>
       <Nav />
       <HeroSection />
       <FeaturesSection />
       <HowItWorksSection />
       <StatsSection />
       <Footer />
-    </>
+    </main>
   );
 }

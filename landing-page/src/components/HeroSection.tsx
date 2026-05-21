@@ -11,6 +11,7 @@ export function HeroSection() {
   useGSAP(() => {
     if (!containerRef.current) return;
 
+    // Staggered reveal: from opacity 0 → visible (CSS default)
     const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
     tl.from(".hero-badge", { opacity: 0, y: 30, duration: 0.6, delay: 0.6 })
       .from(".hero h1", { opacity: 0, y: 50, duration: 0.8 }, "-=0.3")
@@ -18,6 +19,7 @@ export function HeroSection() {
       .from(".hero-buttons", { opacity: 0, y: 30, duration: 0.6 }, "-=0.3")
       .from(".hero-powered", { opacity: 0, duration: 0.5 }, "-=0.2");
 
+    // Parallax on scroll
     gsap.to(".hero-content", {
       scrollTrigger: {
         trigger: containerRef.current,

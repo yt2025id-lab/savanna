@@ -9,29 +9,16 @@
   --card-border: rgba(200, 168, 75, 0.1);
 }
 
-@theme inline {
-  --color-bg: var(--bg);
-  --color-primary: var(--primary);
-  --color-primary-hover: var(--primary-hover);
-  --color-secondary: var(--secondary);
-  --color-accent: var(--accent);
-  --color-text: var(--text);
-  --color-card: var(--card);
-  --color-card-border: var(--card-border);
-  --font-heading: Georgia, 'Times New Roman', serif;
-  --font-body: system-ui, -apple-system, sans-serif;
-}
-
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html { scroll-behavior: smooth; }
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: var(--font-body);
+  font-family: system-ui, -apple-system, sans-serif;
   overflow-x: hidden;
   line-height: 1.6;
 }
-h1, h2, h3, h4 { font-family: var(--font-heading); }
+h1, h2, h3, h4 { font-family: Georgia, 'Times New Roman', serif; }
 a { text-decoration: none; color: inherit; }
 button { border: none; cursor: pointer; font-family: inherit; }
 
@@ -52,7 +39,7 @@ button { border: none; cursor: pointer; font-family: inherit; }
 }
 .nav-logo {
   display: flex; align-items: center; gap: 0.5rem;
-  font-family: var(--font-heading);
+  font-family: Georgia, 'Times New Roman', serif;
   font-size: 1.25rem; font-weight: 700;
   color: var(--primary);
 }
@@ -88,6 +75,7 @@ button { border: none; cursor: pointer; font-family: inherit; }
   text-align: center;
   padding: 8rem 2rem 4rem;
   position: relative; overflow: hidden;
+  color: var(--text);
 }
 .hero-content { position: relative; z-index: 2; max-width: 800px; }
 .hero-badge {
@@ -96,7 +84,8 @@ button { border: none; cursor: pointer; font-family: inherit; }
   border: 1px solid rgba(74, 124, 89, 0.4);
   padding: 0.4rem 1rem; border-radius: 50px;
   font-size: 0.8rem; color: var(--secondary);
-  margin-bottom: 1.5rem; opacity: 0;
+  margin-bottom: 1.5rem;
+  /* GSAP will animate from opacity 0 */
 }
 .hero-badge-dot {
   width: 6px; height: 6px; border-radius: 50%;
@@ -109,7 +98,8 @@ button { border: none; cursor: pointer; font-family: inherit; }
 }
 .hero h1 {
   font-size: clamp(2.5rem, 6vw, 4.5rem);
-  line-height: 1.1; margin-bottom: 1.5rem; opacity: 0;
+  line-height: 1.1; margin-bottom: 1.5rem;
+  color: var(--text);
 }
 .hero h1 .highlight {
   background: linear-gradient(135deg, var(--primary), var(--accent));
@@ -120,13 +110,14 @@ button { border: none; cursor: pointer; font-family: inherit; }
 .hero-sub {
   font-size: clamp(1rem, 2vw, 1.2rem);
   color: var(--accent); max-width: 600px;
-  margin: 0 auto 2.5rem; opacity: 0; line-height: 1.7;
+  margin: 0 auto 2.5rem; line-height: 1.7;
 }
-.hero-buttons { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; opacity: 0; }
+.hero-buttons { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
 .btn-primary {
   background: var(--primary); color: var(--bg);
   padding: 0.9rem 2rem; border-radius: 10px;
   font-weight: 700; font-size: 1rem; transition: all 0.3s;
+  display: inline-block;
 }
 .btn-primary:hover {
   background: var(--primary-hover);
@@ -138,6 +129,7 @@ button { border: none; cursor: pointer; font-family: inherit; }
   border: 2px solid rgba(200, 168, 75, 0.4);
   padding: 0.85rem 2rem; border-radius: 10px;
   font-weight: 600; font-size: 1rem; transition: all 0.3s;
+  display: inline-block;
 }
 .btn-outline:hover {
   border-color: var(--primary);
@@ -147,7 +139,6 @@ button { border: none; cursor: pointer; font-family: inherit; }
 .hero-powered {
   margin-top: 3rem; font-size: 0.8rem;
   color: rgba(245, 237, 214, 0.4);
-  opacity: 0;
 }
 
 /* Section common */
@@ -210,7 +201,7 @@ button { border: none; cursor: pointer; font-family: inherit; }
   width: 56px; height: 56px; border-radius: 50%;
   background: var(--card); border: 2px solid var(--primary);
   display: flex; align-items: center; justify-content: center;
-  font-family: var(--font-heading);
+  font-family: Georgia, 'Times New Roman', serif;
   font-size: 1.2rem; font-weight: 700; color: var(--primary);
   margin: 0 auto 1.25rem; position: relative; z-index: 2;
   transition: all 0.3s;
@@ -229,7 +220,7 @@ button { border: none; cursor: pointer; font-family: inherit; }
 }
 .stat-item { text-align: center; padding: 1.5rem; }
 .stat-value {
-  font-family: var(--font-heading);
+  font-family: Georgia, 'Times New Roman', serif;
   font-size: clamp(2rem, 4vw, 3rem);
   font-weight: 700; color: var(--primary); line-height: 1.2;
 }
@@ -255,6 +246,7 @@ button { border: none; cursor: pointer; font-family: inherit; }
   color: var(--bg); padding: 1rem 3rem; border-radius: 12px;
   font-weight: 700; font-size: 1.15rem; position: relative;
   transition: all 0.3s; animation: cta-pulse 2.5s infinite;
+  display: inline-block;
 }
 .btn-cta:hover {
   transform: translateY(-3px) scale(1.03);
@@ -277,7 +269,7 @@ button { border: none; cursor: pointer; font-family: inherit; }
   flex-wrap: wrap; gap: 1.5rem;
 }
 .footer-logo {
-  font-family: var(--font-heading);
+  font-family: Georgia, 'Times New Roman', serif;
   font-size: 1.1rem; color: var(--primary); margin-bottom: 0.25rem;
 }
 .footer-brand p { font-size: 0.85rem; color: rgba(245, 237, 214, 0.4); }
@@ -299,6 +291,11 @@ button { border: none; cursor: pointer; font-family: inherit; }
   position: absolute; top: 0; left: 0;
   width: 100%; height: 100%;
   pointer-events: none;
+}
+
+/* Visibility safety */
+body, main, section, .hero, .hero-content {
+  visibility: visible !important;
 }
 
 /* Responsive */
