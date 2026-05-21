@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { useRef } from "react";
+import { useGSAP } from "@gsap/react";
+import { gsap, ScrollTrigger } from "@/lib/gsap";
 
 const features = [
   {
@@ -21,45 +23,45 @@ const features = [
 ];
 
 export function FeaturesSection() {
-  useEffect(() => {
-    const gsap = require("gsap");
-    const { ScrollTrigger } = require("gsap/ScrollTrigger");
-    gsap.registerPlugin(ScrollTrigger);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-    // Section headers
-    document.querySelectorAll("#features .section-label, #features .section-title, #features .section-sub").forEach((el: Element) => {
+  useGSAP(() => {
+    const headers = containerRef.current?.querySelectorAll(".section-label, .section-title, .section-sub");
+    headers?.forEach((el) => {
       gsap.from(el, {
         scrollTrigger: { trigger: el, start: "top 88%", toggleActions: "play none none reverse" },
         opacity: 0, y: 40, duration: 0.7,
       });
     });
 
-    // Cards
-    document.querySelectorAll(".feature-card").forEach((card: Element, i: number) => {
+    const cards = containerRef.current?.querySelectorAll(".feature-card");
+    cards?.forEach((card, i) => {
       gsap.from(card, {
         scrollTrigger: { trigger: card, start: "top 85%", toggleActions: "play none none reverse" },
         opacity: 0, y: 60, duration: 0.8, delay: i * 0.15,
       });
     });
-  }, []);
+  }, { scope: containerRef });
 
   return (
     <section className="section" id="features" style={{ background: "var(--bg)" }}>
-      <div className="section-label">Features</div>
-      <h2 className="section-title">
-        Built for the <span style={{ color: "var(--primary)" }}>Future of Finance</span>
-      </h2>
-      <p className="section-sub">
-        Three pillars that make Savanna Finance the smartest way to earn yield on Celo.
-      </p>
-      <div className="features-grid">
-        {features.map((f) => (
-          <div key={f.title} className="feature-card">
-            <span className="feature-icon">{f.icon}</span>
-            <h3>{f.title}</h3>
-            <p>{f.desc}</p>
-          </div>
-        ))}
+      <div ref={containerRef}>
+        <div className="section-label">Features</div>
+        <h2 className="section-title">
+          Built for the <span style={{ color: "var(--primary)" }}>Future of Finance</span>
+        </h2>
+        <p className="section-sub">
+          Three pillars that make Savanna Finance the smartest way to earn yield on Celo.
+        </p>
+        <div className="features-grid">
+          {features.map((f) => (
+            <div key={f.title} className="feature-card">
+              <span className="feature-icon">{f.icon}</span>
+              <h3>{f.title}</h3>
+              <p>{f.desc}</p>
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );

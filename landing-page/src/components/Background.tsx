@@ -15,7 +15,6 @@ const FRAGMENT_SHADER = `
   uniform vec2 u_resolution;
   uniform vec2 u_mouse;
 
-  // Simple noise
   float hash(vec2 p) {
     return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
   }
@@ -46,26 +45,21 @@ const FRAGMENT_SHADER = `
     vec2 uv = gl_FragCoord.xy / u_resolution;
     float t = u_time * 0.15;
 
-    // Base gradient: deep forest night
     vec3 col = mix(
-      vec3(0.05, 0.10, 0.06),  // #0D1A0F area
-      vec3(0.08, 0.14, 0.09),  // slightly lighter
+      vec3(0.05, 0.10, 0.06),
+      vec3(0.08, 0.14, 0.09),
       uv.y
     );
 
-    // Savanna noise layers
     float n1 = fbm(uv * 3.0 + vec2(t * 0.3, t * 0.1));
     float n2 = fbm(uv * 5.0 - vec2(t * 0.2, t * 0.15));
 
-    // Golden savanna glow (primary #C8A84B)
     vec3 gold = vec3(0.784, 0.659, 0.294);
     col += gold * n1 * 0.06;
 
-    // Green secondary (#4A7C59)
     vec3 green = vec3(0.290, 0.486, 0.351);
     col += green * n2 * 0.08;
 
-    // Moving light spots like fireflies / stars
     for (int i = 0; i < 12; i++) {
       float fi = float(i);
       vec2 pos = vec2(
@@ -78,16 +72,13 @@ const FRAGMENT_SHADER = `
       col += gold * glow * 0.5;
     }
 
-    // Mouse interaction - subtle radial light
     vec2 mouseUV = u_mouse / u_resolution;
     float mouseDist = length(uv - mouseUV);
     col += gold * 0.03 / (mouseDist + 0.5);
 
-    // Vignette
     float vig = 1.0 - length(uv - 0.5) * 0.8;
     col *= vig;
 
-    // Subtle horizontal savanna grass lines at bottom
     float grass = noise(vec2(uv.x * 30.0, uv.y * 3.0 + t * 0.5));
     float grassMask = smoothstep(0.15, 0.0, uv.y) * grass;
     col += green * grassMask * 0.15;
@@ -101,13 +92,13 @@ export function Background() {
   const mouseRef = useRef({ x: 0, y: 0 });
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+
     const canvas = canvasRef.current;
     if (!canvas) return;
-
     const gl = canvas.getContext("webgl");
     if (!gl) return;
 
-    // Compile shaders
     function compileShader(type: number, source: string) {
       const shader = gl!.createShader(type)!;
       gl!.shaderSource(shader, source);
@@ -123,7 +114,6 @@ export function Background() {
     gl.linkProgram(program);
     gl.useProgram(program);
 
-    // Full-screen quad
     const positions = new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]);
     const buf = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, buf);
@@ -133,7 +123,6 @@ export function Background() {
     gl.enableVertexAttribArray(aPos);
     gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
 
-    // Uniforms
     const uTime = gl.getUniformLocation(program, "u_time");
     const uRes = gl.getUniformLocation(program, "u_resolution");
     const uMouse = gl.getUniformLocation(program, "u_mouse");
@@ -146,7 +135,6 @@ export function Background() {
     resize();
     window.addEventListener("resize", resize);
 
-    // Mouse tracking
     function onMouse(e: MouseEvent) {
       const rect = canvas!.getBoundingClientRect();
       mouseRef.current.x = e.clientX - rect.left;
@@ -154,7 +142,6 @@ export function Background() {
     }
     canvas.parentElement!.addEventListener("mousemove", onMouse);
 
-    // Animation loop
     let raf: number;
     const start = performance.now();
     function draw() {

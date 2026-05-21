@@ -1,32 +1,43 @@
 "use client";
 
-import { useEffect } from "react";
+import { useRef } from "react";
+import { useGSAP } from "@gsap/react";
+import { gsap, ScrollTrigger } from "@/lib/gsap";
 
 export function Footer() {
-  useEffect(() => {
-    const gsap = require("gsap");
-    const { ScrollTrigger } = require("gsap/ScrollTrigger");
-    gsap.registerPlugin(ScrollTrigger);
+  const ctaRef = useRef<HTMLElement>(null);
 
-    // CTA section
-    gsap.from(".cta-section h2", {
-      scrollTrigger: { trigger: ".cta-section", start: "top 80%" },
-      opacity: 0, y: 50, duration: 0.8,
-    });
-    gsap.from(".cta-section p", {
-      scrollTrigger: { trigger: ".cta-section", start: "top 75%" },
-      opacity: 0, y: 40, duration: 0.7, delay: 0.2,
-    });
-    gsap.from(".btn-cta", {
-      scrollTrigger: { trigger: ".btn-cta", start: "top 90%" },
-      opacity: 0, scale: 0.8, duration: 0.6, delay: 0.3,
-    });
-  }, []);
+  useGSAP(() => {
+    if (!ctaRef.current) return;
+
+    const h2 = ctaRef.current.querySelector("h2");
+    const p = ctaRef.current.querySelector("p");
+    const btn = ctaRef.current.querySelector(".btn-cta");
+
+    if (h2) {
+      gsap.from(h2, {
+        scrollTrigger: { trigger: ctaRef.current, start: "top 80%" },
+        opacity: 0, y: 50, duration: 0.8,
+      });
+    }
+    if (p) {
+      gsap.from(p, {
+        scrollTrigger: { trigger: ctaRef.current, start: "top 75%" },
+        opacity: 0, y: 40, duration: 0.7, delay: 0.2,
+      });
+    }
+    if (btn) {
+      gsap.from(btn, {
+        scrollTrigger: { trigger: btn, start: "top 90%" },
+        opacity: 0, scale: 0.8, duration: 0.6, delay: 0.3,
+      });
+    }
+  }, { scope: ctaRef });
 
   return (
     <>
       {/* CTA Section */}
-      <section className="cta-section">
+      <section ref={ctaRef} className="cta-section">
         <h2>
           Ready to Grow
           <br />

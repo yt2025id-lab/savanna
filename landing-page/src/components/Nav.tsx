@@ -1,21 +1,23 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
+import { useGSAP } from "@gsap/react";
+import { gsap } from "@/lib/gsap";
 
 export function Nav() {
   const navRef = useRef<HTMLElement>(null);
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
-  useEffect(() => {
-    // GSAP slide-down
-    const gsap = require("gsap");
+  useGSAP(() => {
+    if (!navRef.current) return;
     gsap.to(navRef.current, { y: 0, duration: 0.8, ease: "power3.out", delay: 0.2 });
+  });
 
-    const onScroll = () => setScrolled(window.scrollY > 50);
-    window.addEventListener("scroll", onScroll);
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+  // Scroll detection
+  if (typeof window !== "undefined") {
+    window.addEventListener("scroll", () => setScrolled(window.scrollY > 50));
+  }
 
   return (
     <nav ref={navRef} className={`nav ${scrolled ? "scrolled" : ""}`}>

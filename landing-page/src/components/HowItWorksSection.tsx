@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { useRef } from "react";
+import { useGSAP } from "@gsap/react";
+import { gsap, ScrollTrigger } from "@/lib/gsap";
 
 const steps = [
   {
@@ -21,25 +23,25 @@ const steps = [
 ];
 
 export function HowItWorksSection() {
-  useEffect(() => {
-    const gsap = require("gsap");
-    const { ScrollTrigger } = require("gsap/ScrollTrigger");
-    gsap.registerPlugin(ScrollTrigger);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-    document.querySelectorAll("#how-it-works .section-label, #how-it-works .section-title, #how-it-works .section-sub").forEach((el: Element) => {
+  useGSAP(() => {
+    const headers = containerRef.current?.querySelectorAll(".section-label, .section-title, .section-sub");
+    headers?.forEach((el) => {
       gsap.from(el, {
         scrollTrigger: { trigger: el, start: "top 88%", toggleActions: "play none none reverse" },
         opacity: 0, y: 40, duration: 0.7,
       });
     });
 
-    document.querySelectorAll(".step").forEach((step: Element, i: number) => {
+    const stepEls = containerRef.current?.querySelectorAll(".step");
+    stepEls?.forEach((step, i) => {
       gsap.from(step, {
         scrollTrigger: { trigger: step, start: "top 85%", toggleActions: "play none none reverse" },
         opacity: 0, y: 50, scale: 0.9, duration: 0.7, delay: i * 0.2,
       });
     });
-  }, []);
+  }, { scope: containerRef });
 
   return (
     <section
@@ -47,21 +49,23 @@ export function HowItWorksSection() {
       id="how-it-works"
       style={{ background: "linear-gradient(180deg, #0D1A0F 0%, #111F13 100%)" }}
     >
-      <div className="section-label">How It Works</div>
-      <h2 className="section-title">
-        Three Steps to <span style={{ color: "var(--primary)" }}>Start Earning</span>
-      </h2>
-      <p className="section-sub">
-        From any chain to earning yield on Celo in under 2 minutes.
-      </p>
-      <div className="steps-container">
-        {steps.map((s) => (
-          <div key={s.num} className="step">
-            <div className="step-number">{s.num}</div>
-            <h3>{s.title}</h3>
-            <p>{s.desc}</p>
-          </div>
-        ))}
+      <div ref={containerRef}>
+        <div className="section-label">How It Works</div>
+        <h2 className="section-title">
+          Three Steps to <span style={{ color: "var(--primary)" }}>Start Earning</span>
+        </h2>
+        <p className="section-sub">
+          From any chain to earning yield on Celo in under 2 minutes.
+        </p>
+        <div className="steps-container">
+          {steps.map((s) => (
+            <div key={s.num} className="step">
+              <div className="step-number">{s.num}</div>
+              <h3>{s.title}</h3>
+              <p>{s.desc}</p>
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );
