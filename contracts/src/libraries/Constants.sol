@@ -49,6 +49,15 @@ library Constants {
     /// @notice Total protocols supported (Aave, Moola, Compound, Reserve)
     uint8 public constant PROTOCOL_COUNT = 4;
 
+    // ============ Cross-Chain ============
+
+    /// @notice Minimum cross-chain deposit amount (in vault asset units)
+    uint256 public constant MIN_CROSS_CHAIN_DEPOSIT = 5e6; // 5 USDC
+    /// @notice Maximum number of allowed source chains
+    uint256 public constant MAX_SOURCE_CHAINS = 30;
+    /// @notice Bridge fee buffer in basis points (0.5%)
+    uint256 public constant BRIDGE_FEE_BUFFER_BPS = 50;
+
     // ============ Role IDs (for future access control upgrade) ============
 
     bytes32 public constant DEFAULT_ADMIN_ROLE = 0x00;

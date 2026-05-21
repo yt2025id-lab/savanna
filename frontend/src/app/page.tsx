@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Leaf, ArrowRight, Zap, Shield, BarChart3 } from "lucide-react";
+import { Leaf, ArrowRight, Zap, Shield, BarChart3, Globe } from "lucide-react";
 
 export default function Home() {
   return (
@@ -13,7 +13,7 @@ export default function Home() {
           <div className="inline-flex items-center gap-2 rounded-full border border-accent/20 bg-accent-dim px-4 py-1.5 mb-6">
             <Leaf className="h-3.5 w-3.5 text-accent" />
             <span className="text-xs font-medium text-accent">
-              Live on Celo
+              Cross-Chain · Live on Celo
             </span>
           </div>
 
@@ -24,8 +24,8 @@ export default function Home() {
           </h1>
 
           <p className="mt-4 max-w-md mx-auto text-base text-muted-light leading-relaxed">
-            Deposit stablecoins. AI finds the best yield across lending
-            protocols on Celo. Earn passively.
+            Deposit stablecoins from any chain via LI.FI. AI finds the best
+            yield across lending protocols on Celo. Earn passively.
           </p>
 
           <div className="mt-8 flex flex-col sm:flex-row items-center gap-3">
@@ -49,14 +49,14 @@ export default function Home() {
             description="Chainlink oracle analyzes lending rates across protocols and auto-deploys your funds to the highest yield."
           />
           <FeatureCard
+            icon={<Globe className="h-5 w-5 text-accent" />}
+            title="Cross-Chain via LI.FI"
+            description="Deposit from any chain — Ethereum, Arbitrum, Optimism, Polygon, Base, and 50+ more — all in one click via LI.FI bridge."
+          />
+          <FeatureCard
             icon={<Shield className="h-5 w-5 text-accent" />}
             title="Secure by Design"
             description="OpenZeppelin ERC-4626 vault with custom errors, reentrancy guard, and emergency pause. Auditable on-chain."
-          />
-          <FeatureCard
-            icon={<BarChart3 className="h-5 w-5 text-accent" />}
-            title="Celo Native"
-            description="Built for Celo L2 — ultra-low gas fees, native stablecoin support (cUSD/USDC), and mobile-first payments."
           />
         </div>
       </section>
@@ -68,13 +68,14 @@ export default function Home() {
             How it Works
           </h2>
           <p className="text-center text-sm text-muted mb-10">
-            Three steps to start earning
+            Four steps to start earning from any chain
           </p>
 
-          <div className="grid gap-6 sm:grid-cols-3">
-            <StepCard step={1} title="Deposit" description="Deposit USDC or cUSD into the Savanna vault. Receive svYLD shares." />
-            <StepCard step={2} title="AI Analyzes" description="Chainlink oracle compares APY across Aave V3 and other lending protocols on Celo." />
-            <StepCard step={3} title="Auto-Deploy" description="Funds deployed to the best protocol. Withdraw anytime." />
+          <div className="grid gap-6 sm:grid-cols-4">
+            <StepCard step={1} title="Bridge" description="Deposit from any chain via LI.FI — Ethereum, Arbitrum, Polygon, and 50+ more." />
+            <StepCard step={2} title="Deposit" description="Receive USDC on Celo and deposit into the Savanna vault. Get svYLD shares." />
+            <StepCard step={3} title="AI Analyzes" description="Chainlink oracle compares APY across Aave V3 and other lending protocols on Celo." />
+            <StepCard step={4} title="Auto-Deploy" description="Funds deployed to the best protocol. Withdraw anytime." />
           </div>
         </div>
       </section>

@@ -16,13 +16,18 @@ export const SAVANNA_VAULT_ABI = [
   "function redeem(uint256 shares, address receiver, address owner) external returns (uint256 assets)",
   // SavannaVault
   "function controller() external view returns (address)",
+  "function crossChainReceiver() external view returns (address)",
   "function totalDeployed() external view returns (uint256)",
   "function totalPositions() external view returns (uint256)",
+  "function totalCrossChainDeposits() external view returns (uint256)",
   "function requestStrategy(uint256 timeHorizon) external",
   "function cancelTimedOutRequest() external",
+  "function crossChainDeposit(uint256 assets, address receiver, uint256 sourceChainId, address bridgeToken) external returns (uint256 shares)",
   "function getUserPosition(address user) external view returns (tuple(uint256 depositAmount, uint256 timeHorizon, uint256 depositTimestamp, address activeStrategy, uint256 allocatedAmount, bool isActive))",
+  "function getCrossChainDeposit(uint256 index) external view returns (tuple(address depositor, uint256 sourceChainId, uint256 amount, uint256 timestamp, address bridgeToken, bool processed))",
   "function hasActiveRequest(address user) external view returns (bool)",
   "function setController(address controller) external",
+  "function setCrossChainReceiver(address receiver) external",
   "function pause() external",
   "function unpause() external",
   "event Deposited(address indexed user, uint256 amount, uint256 shares)",
@@ -30,6 +35,7 @@ export const SAVANNA_VAULT_ABI = [
   "event StrategyExecuted(address indexed user, address strategy, uint256 amount)",
   "event StrategyCompleted(address indexed user, uint256 returnedAmount)",
   "event Withdrawn(address indexed user, uint256 amount, uint256 shares)",
+  "event CrossChainDepositReceived(address indexed depositor, uint256 sourceChainId, uint256 amount, address bridgeToken, uint256 shares)",
 ] as const;
 
 export const SAVANNA_CONTROLLER_ABI = [
@@ -49,4 +55,25 @@ export const ERC20_ABI = [
   "function decimals() external view returns (uint8)",
   "function symbol() external view returns (string)",
   "function name() external view returns (string)",
+] as const;
+
+export const CROSS_CHAIN_RECEIVER_ABI = [
+  "function VAULT() external view returns (address)",
+  "function VAULT_ASSET() external view returns (address)",
+  "function totalCrossChainDeposits() external view returns (uint256)",
+  "function totalCrossChainVolume() external view returns (uint256)",
+  "function allowedSourceChains(uint256 chainId) external view returns (bool)",
+  "function supportedBridgeTokens(address token) external view returns (bool)",
+  "function receiveCrossChainDeposit(address depositor, uint256 sourceChainId, address bridgeToken, uint256 amount) external returns (uint256 shares)",
+  "function getCrossChainDeposit(uint256 index) external view returns (tuple(address depositor, uint256 sourceChainId, uint256 amount, uint256 timestamp, address bridgeToken, bool processed))",
+  "function getUserCrossChainDeposits(address user) external view returns (uint256[] memory)",
+  "function getUserCrossChainDepositCount(address user) external view returns (uint256)",
+  "function setSourceChain(uint256 chainId, bool allowed) external",
+  "function setSourceChains(uint256[] chainIds, bool allowed) external",
+  "function setBridgeToken(address token, bool supported) external",
+  "function pause() external",
+  "function unpause() external",
+  "event SourceChainUpdated(uint256 indexed chainId, bool allowed)",
+  "event BridgeTokenUpdated(address indexed token, bool supported)",
+  "event DepositReceived(address indexed depositor, uint256 indexed sourceChainId, uint256 amount, address bridgeToken, uint256 vaultShares)",
 ] as const;

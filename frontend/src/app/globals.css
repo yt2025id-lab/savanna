@@ -62,3 +62,26 @@ body {
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
+
+/* LI.FI Widget overrides — match Savanna dark theme */
+.lifi-widget-container {
+  min-height: 380px;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.lifi-widget-container iframe,
+.lifi-widget-container > div {
+  border-radius: 12px;
+}
+
+/* Ensure LI.FI widget respects our dark bg */
+.lifi-widget-container .MuiPaper-root {
+  background-color: #131316 !important;
+  border-radius: 12px !important;
+}
+
+.lifi-widget-container .MuiButton-root {
+  border-radius: 8px !important;
+  text-transform: none !important;
+}

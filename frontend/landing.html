@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Savanna Finance — Yield That Grows Naturally</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌿</text></svg>">
+<style>
+/* ===== RESET & BASE ===== */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  background: #0D1A0F;
+  color: #F5EDD6;
+  overflow-x: hidden;
+  line-height: 1.6;
+}
+h1, h2, h3, h4 { font-family: Georgia, 'Times New Roman', serif; }
+a { text-decoration: none; color: inherit; }
+button { border: none; cursor: pointer; font-family: inherit; }
+img { max-width: 100%; }
+
+/* ===== NAVBAR ===== */
+.navbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+  padding: 1rem 2rem;
+  display: flex; align-items: center; justify-content: space-between;
+  transition: all 0.4s ease;
+  transform: translateY(-100%);
+}
+.navbar.scrolled {
+  background: rgba(13, 26, 15, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(200, 168, 75, 0.15);
+  padding: 0.75rem 2rem;
+}
+.nav-logo {
+  display: flex; align-items: center; gap: 0.5rem;
+  font-family: Georgia, serif;
+  font-size: 1.25rem; font-weight: 700;
+  color: #C8A84B;
+}
+.nav-logo span { font-size: 1.5rem; }
+.nav-links { display: flex; align-items: center; gap: 2rem; }
+.nav-links a {
+  font-size: 0.9rem; color: #E8D5A3;
+  transition: color 0.3s;
+  position: relative;
+}
+.nav-links a::after {
+  content: ''; position: absolute; bottom: -4px; left: 0;
+  width: 0; height: 2px; background: #C8A84B;
+  transition: width 0.3s;
+}
+.nav-links a:hover { color: #C8A84B; }
+.nav-links a:hover::after { width: 100%; }
+.btn-launch {
+  background: #C8A84B; color: #0D1A0F;
+  padding: 0.6rem 1.5rem; border-radius: 8px;
+  font-weight: 700; font-size: 0.9rem;
+  transition: all 0.3s;
+}
+.btn-launch:hover {
+  background: #d4b85a;
+  box-shadow: 0 0 25px rgba(200, 168, 75, 0.4);
+  transform: translateY(-1px);
+}
+.mobile-toggle { display: none; background: none; color: #E8D5A3; font-size: 1.5rem; }
+
+/* ===== HERO ===== */
+.hero {
+  min-height: 100vh;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  text-align: center;
+  padding: 8rem 2rem 4rem;
+  position: relative;
+  overflow: hidden;
+}
+#hero-canvas {
+  position: absolute; top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+}
+.hero-content { position: relative; z-index: 2; max-width: 800px; }
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  background: rgba(74, 124, 89, 0.2);
+  border: 1px solid rgba(74, 124, 89, 0.4);
+  padding: 0.4rem 1rem; border-radius: 50px;
+  font-size: 0.8rem; color: #4A7C59;
+  margin-bottom: 1.5rem;
+}
+.hero-badge-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #4A7C59;
+  animation: pulse-dot 2s infinite;
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.5); }
+}
+.hero h1 {
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  line-height: 1.1;
+  margin-bottom: 1.5rem;
+  opacity: 0;
+}
+.hero h1 .highlight {
+  background: linear-gradient(135deg, #C8A84B, #E8D5A3);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.hero p {
+  font-size: clamp(1rem, 2vw, 1.2rem);
+  color: #E8D5A3;
+  max-width: 600px; margin: 0 auto 2.5rem;
+  opacity: 0;
+  line-height: 1.7;
+}
+.hero-buttons {
+  display: flex; gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  opacity: 0;
+}
+.btn-primary {
+  background: #C8A84B; color: #0D1A0F;
+  padding: 0.9rem 2rem; border-radius: 10px;
+  font-weight: 700; font-size: 1rem;
+  transition: all 0.3s;
+}
+.btn-primary:hover {
+  background: #d4b85a;
+  box-shadow: 0 0 30px rgba(200, 168, 75, 0.35);
+  transform: translateY(-2px);
+}
+.btn-outline {
+  background: transparent; color: #C8A84B;
+  border: 2px solid rgba(200, 168, 75, 0.4);
+  padding: 0.85rem 2rem; border-radius: 10px;
+  font-weight: 600; font-size: 1rem;
+  transition: all 0.3s;
+}
+.btn-outline:hover {
+  border-color: #C8A84B;
+  background: rgba(200, 168, 75, 0.1);
+  transform: translateY(-2px);
+}
+.hero-powered {
+  margin-top: 3rem;
+  font-size: 0.8rem;
+  color: rgba(245, 237, 214, 0.4);
+  display: flex; align-items: center; gap: 0.5rem;
+  opacity: 0;
+}
+.hero-powered img { height: 18px; }
+
+/* ===== SECTIONS COMMON ===== */
+section { padding: 6rem 2rem; }
+.section-label {
+  font-size: 0.8rem; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 3px;
+  color: #C8A84B;
+  margin-bottom: 0.75rem;
+  text-align: center;
+}
+.section-title {
+  font-size: clamp(2rem, 4vw, 3rem);
+  text-align: center;
+  margin-bottom: 1rem;
+  line-height: 1.2;
+}
+.section-sub {
+  text-align: center;
+  color: #E8D5A3;
+  max-width: 600px;
+  margin: 0 auto 3rem;
+  font-size: 1.05rem;
+}
+
+/* ===== FEATURES ===== */
+.features { background: #0D1A0F; }
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+.feature-card {
+  background: #1A2E1C;
+  border: 1px solid rgba(200, 168, 75, 0.1);
+  border-radius: 16px;
+  padding: 2rem;
+  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  position: relative;
+  overflow: hidden;
+}
+.feature-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #C8A84B, transparent);
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+.feature-card:hover::before { opacity: 1; }
+.feature-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  border-color: rgba(200, 168, 75, 0.3);
+  box-shadow: 0 20px 60px rgba(200, 168, 75, 0.1), 0 0 40px rgba(200, 168, 75, 0.05);
+}
+.feature-icon {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  display: block;
+}
+.feature-card h3 {
+  font-size: 1.3rem;
+  margin-bottom: 0.75rem;
+  color: #F5EDD6;
+}
+.feature-card p {
+  color: #E8D5A3;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  opacity: 0.8;
+}
+
+/* ===== HOW IT WORKS ===== */
+.how-it-works {
+  background: linear-gradient(180deg, #0D1A0F 0%, #111F13 100%);
+}
+.steps-container {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+  max-width: 1000px;
+  margin: 0 auto;
+  position: relative;
+}
+.steps-container::before {
+  content: '';
+  position: absolute;
+  top: 40px; left: 15%; right: 15%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(200, 168, 75, 0.3), rgba(200, 168, 75, 0.3), transparent);
+}
+.step {
+  text-align: center;
+  position: relative;
+}
+.step-number {
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  background: #1A2E1C;
+  border: 2px solid #C8A84B;
+  display: flex; align-items: center; justify-content: center;
+  font-family: Georgia, serif;
+  font-size: 1.2rem; font-weight: 700;
+  color: #C8A84B;
+  margin: 0 auto 1.25rem;
+  position: relative;
+  z-index: 2;
+  transition: all 0.3s;
+}
+.step:hover .step-number {
+  background: #C8A84B;
+  color: #0D1A0F;
+  box-shadow: 0 0 30px rgba(200, 168, 75, 0.3);
+}
+.step h3 {
+  font-size: 1.2rem;
+  margin-bottom: 0.5rem;
+}
+.step p {
+  color: #E8D5A3;
+  font-size: 0.9rem;
+  opacity: 0.7;
+  max-width: 250px;
+  margin: 0 auto;
+}
+
+/* ===== STATS ===== */
+.stats {
+  background: #111F13;
+  border-top: 1px solid rgba(200, 168, 75, 0.1);
+  border-bottom: 1px solid rgba(200, 168, 75, 0.1);
+}
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2rem;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+.stat-item {
+  text-align: center;
+  padding: 1.5rem;
+}
+.stat-value {
+  font-family: Georgia, serif;
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 700;
+  color: #C8A84B;
+  line-height: 1.2;
+}
+.stat-value .suffix {
+  font-size: 0.6em;
+  color: #E8D5A3;
+}
+.stat-label {
+  font-size: 0.9rem;
+  color: rgba(232, 213, 163, 0.6);
+  margin-top: 0.25rem;
+}
+
+/* ===== CTA ===== */
+.cta-section {
+  background: linear-gradient(135deg, #0D1A0F 0%, #1A2E1C 30%, #2D3A1F 60%, #4A3C1A 100%);
+  text-align: center;
+  padding: 8rem 2rem;
+  position: relative;
+  overflow: hidden;
+}
+.cta-section::before {
+  content: '';
+  position: absolute;
+  top: -50%; left: -50%;
+  width: 200%; height: 200%;
+  background: radial-gradient(ellipse at center, rgba(200, 168, 75, 0.08) 0%, transparent 60%);
+  pointer-events: none;
+}
+.cta-section h2 {
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  margin-bottom: 1rem;
+  position: relative;
+}
+.cta-section p {
+  color: #E8D5A3;
+  font-size: 1.1rem;
+  margin-bottom: 2.5rem;
+  position: relative;
+}
+.btn-cta {
+  background: linear-gradient(135deg, #C8A84B, #d4b85a);
+  color: #0D1A0F;
+  padding: 1rem 3rem;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 1.15rem;
+  position: relative;
+  transition: all 0.3s;
+  animation: cta-pulse 2.5s infinite;
+}
+.btn-cta:hover {
+  transform: translateY(-3px) scale(1.03);
+  box-shadow: 0 0 50px rgba(200, 168, 75, 0.4);
+}
+@keyframes cta-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(200, 168, 75, 0.4); }
+  50% { box-shadow: 0 0 0 15px rgba(200, 168, 75, 0); }
+}
+
+/* ===== FOOTER ===== */
+.footer {
+  background: #0A140B;
+  border-top: 1px solid rgba(200, 168, 75, 0.1);
+  padding: 3rem 2rem 2rem;
+}
+.footer-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+.footer-brand .footer-logo {
+  font-family: Georgia, serif;
+  font-size: 1.1rem;
+  color: #C8A84B;
+  margin-bottom: 0.25rem;
+}
+.footer-brand p {
+  font-size: 0.85rem;
+  color: rgba(245, 237, 214, 0.4);
+}
+.footer-links {
+  display: flex; gap: 1.5rem;
+}
+.footer-links a {
+  font-size: 0.9rem;
+  color: rgba(232, 213, 163, 0.6);
+  transition: color 0.3s;
+}
+.footer-links a:hover { color: #C8A84B; }
+.footer-bottom {
+  text-align: center;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(200, 168, 75, 0.08);
+  font-size: 0.8rem;
+  color: rgba(245, 237, 214, 0.3);
+  max-width: 1100px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+  .nav-links { display: none; }
+  .mobile-toggle { display: block; }
+  .nav-links.open {
+    display: flex; flex-direction: column;
+    position: absolute; top: 100%; left: 0; right: 0;
+    background: rgba(13, 26, 15, 0.95);
+    backdrop-filter: blur(20px);
+    padding: 1.5rem 2rem; gap: 1rem;
+    border-bottom: 1px solid rgba(200, 168, 75, 0.15);
+  }
+  .steps-container { grid-template-columns: 1fr; gap: 2.5rem; }
+  .steps-container::before { display: none; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .features-grid { grid-template-columns: 1fr; }
+  .footer-inner { flex-direction: column; text-align: center; }
+}
+@media (max-width: 480px) {
+  .stats-grid { grid-template-columns: 1fr 1fr; gap: 1rem; }
+  section { padding: 4rem 1.25rem; }
+  .hero { padding: 7rem 1.25rem 3rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- ===== NAVBAR ===== -->
+<nav class="navbar" id="navbar">
+  <a href="#" class="nav-logo"><span>🌿</span> Savanna Finance</a>
+  <div class="nav-links" id="navLinks">
+    <a href="#home">Home</a>
+    <a href="#features">Features</a>
+    <a href="#how-it-works">How It Works</a>
+    <a href="#stats">Stats</a>
+    <a href="/earn" class="btn-launch">Launch App</a>
+  </div>
+  <button class="mobile-toggle" id="mobileToggle" aria-label="Toggle menu">☰</button>
+</nav>
+
+<!-- ===== HERO ===== -->
+<section class="hero" id="home">
+  <canvas id="hero-canvas"></canvas>
+  <div class="hero-content">
+    <div class="hero-badge">
+      <div class="hero-badge-dot"></div>
+      Live on Celo Network
+    </div>
+    <h1>Yield That Grows<br><span class="highlight">Naturally</span></h1>
+    <p>AI-powered yield protocol on Celo — maximize your returns while the ecosystem thrives. Deposit from any chain, earn passively.</p>
+    <div class="hero-buttons">
+      <a href="/earn" class="btn-primary">Start Earning →</a>
+      <a href="#how-it-works" class="btn-outline">Read Docs</a>
+    </div>
+    <div class="hero-powered">
+      ⚡ Powered by Celo Network — Carbon Negative Blockchain
+    </div>
+  </div>
+</section>
+
+<!-- ===== FEATURES ===== -->
+<section class="features" id="features">
+  <div class="section-label">Features</div>
+  <h2 class="section-title">Built for the <span style="color:#C8A84B">Future of Finance</span></h2>
+  <p class="section-sub">Three pillars that make Savanna Finance the smartest way to earn yield on Celo.</p>
+  <div class="features-grid">
+    <div class="feature-card">
+      <span class="feature-icon">🤖</span>
+      <h3>AI-Powered Yield</h3>
+      <p>Chainlink oracle analyzes lending rates across protocols and auto-deploys your funds to the highest APY. Smart rebalancing, zero effort.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">🌉</span>
+      <h3>Cross-Chain Bridge</h3>
+      <p>Deposit from any chain — Ethereum, Arbitrum, Base, Polygon, and 50+ more — all bridged seamlessly via LI.FI integration.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">🛡️</span>
+      <h3>Battle-Tested Security</h3>
+      <p>OpenZeppelin ERC-4626 vault with reentrancy guards, custom errors, and emergency pause. All contracts compiled and tested — 21/21 tests passed.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== HOW IT WORKS ===== -->
+<section class="how-it-works" id="how-it-works">
+  <div class="section-label">How It Works</div>
+  <h2 class="section-title">Three Steps to <span style="color:#C8A84B">Start Earning</span></h2>
+  <p class="section-sub">From any chain to earning yield on Celo in under 2 minutes.</p>
+  <div class="steps-container">
+    <div class="step">
+      <div class="step-number">1</div>
+      <h3>Connect Wallet</h3>
+      <p>Connect your wallet from any supported chain. MetaMask, Rainbow, Coinbase Wallet and more.</p>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <h3>Deposit Assets</h3>
+      <p>Bridge from any chain via LI.FI or deposit USDC directly on Celo. Get svYLD vault shares instantly.</p>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <h3>Earn Yield Automatically</h3>
+      <p>AI analyzes lending rates and deploys your funds to the best protocol. Sit back and watch your yield grow.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== STATS ===== -->
+<section class="stats" id="stats">
+  <div class="section-label">Protocol Stats</div>
+  <h2 class="section-title">Growing <span style="color:#C8A84B">Every Day</span></h2>
+  <p class="section-sub">Real numbers from a real protocol on Celo.</p>
+  <div class="stats-grid">
+    <div class="stat-item">
+      <div class="stat-value"><span class="counter" data-target="2.4" data-decimals="1">0</span><span class="suffix">M+</span></div>
+      <div class="stat-label">Total Value Locked</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value"><span class="counter" data-target="18.5" data-decimals="1">0</span><span class="suffix">%</span></div>
+      <div class="stat-label">Average APY</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value"><span class="counter" data-target="10000" data-decimals="0">0</span><span class="suffix">+</span></div>
+      <div class="stat-label">Transactions</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value"><span class="counter" data-target="12" data-decimals="0">0</span><span class="suffix">+</span></div>
+      <div class="stat-label">Supported Assets</div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== CTA ===== -->
+<section class="cta-section">
+  <h2>Ready to Grow<br>Your <span style="color:#C8A84B">Yield</span>?</h2>
+  <p>Join hundreds of depositors earning passive yield on Celo Network.</p>
+  <a href="/earn" class="btn-cta">Launch App Now →</a>
+</section>
+
+<!-- ===== FOOTER ===== -->
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <div class="footer-logo">🌿 Savanna Finance</div>
+      <p>Yield That Grows Naturally</p>
+    </div>
+    <div class="footer-links">
+      <a href="#">Twitter</a>
+      <a href="#">Discord</a>
+      <a href="#">GitHub</a>
+      <a href="#">Docs</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    Built on Celo Network · © 2026 Savanna Finance. All rights reserved.
+  </div>
+</footer>
+
+<!-- ===== GSAP ===== -->
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+<script>
+(function() {
+  'use strict';
+  gsap.registerPlugin(ScrollTrigger);
+
+  // ===== MOBILE MENU =====
+  var mobileToggle = document.getElementById('mobileToggle');
+  var navLinks = document.getElementById('navLinks');
+  mobileToggle.addEventListener('click', function() {
+    navLinks.classList.toggle('open');
+  });
+  navLinks.querySelectorAll('a').forEach(function(link) {
+    link.addEventListener('click', function() {
+      navLinks.classList.remove('open');
+    });
+  });
+
+  // ===== NAVBAR SCROLL =====
+  var navbar = document.getElementById('navbar');
+  gsap.to(navbar, { y: 0, duration: 0.8, ease: 'power3.out', delay: 0.2 });
+  window.addEventListener('scroll', function() {
+    if (window.scrollY > 50) {
+      navbar.classList.add('scrolled');
+    } else {
+      navbar.classList.remove('scrolled');
+    }
+  });
+
+  // ===== HERO CANVAS — PARTICLES =====
+  var canvas = document.getElementById('hero-canvas');
+  var ctx = canvas.getContext('2d');
+  var particles = [];
+  var mouseX = 0, mouseY = 0;
+
+  function resizeCanvas() {
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+  }
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+
+  function createParticles() {
+    particles = [];
+    var count = Math.min(120, Math.floor((canvas.width * canvas.height) / 8000));
+    for (var i = 0; i < count; i++) {
+      particles.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        vx: (Math.random() - 0.5) * 0.3,
+        vy: (Math.random() - 0.5) * 0.3,
+        r: Math.random() * 2 + 0.5,
+        alpha: Math.random() * 0.5 + 0.1,
+        color: Math.random() > 0.6 ? '#C8A84B' : '#4A7C59'
+      });
+    }
+  }
+  createParticles();
+
+  canvas.parentElement.addEventListener('mousemove', function(e) {
+    var rect = canvas.getBoundingClientRect();
+    mouseX = e.clientX - rect.left;
+    mouseY = e.clientY - rect.top;
+  });
+
+  function drawParticles() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (var i = 0; i < particles.length; i++) {
+      var p = particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      if (p.x < 0) p.x = canvas.width;
+      if (p.x > canvas.width) p.x = 0;
+      if (p.y < 0) p.y = canvas.height;
+      if (p.y > canvas.height) p.y = 0;
+
+      // Mouse interaction
+      var dx = mouseX - p.x;
+      var dy = mouseY - p.y;
+      var dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 150) {
+        p.x -= dx * 0.005;
+        p.y -= dy * 0.005;
+      }
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = p.color;
+      ctx.globalAlpha = p.alpha;
+      ctx.fill();
+
+      // Lines between close particles
+      for (var j = i + 1; j < particles.length; j++) {
+        var p2 = particles[j];
+        var d = Math.sqrt((p.x - p2.x) ** 2 + (p.y - p2.y) ** 2);
+        if (d < 100) {
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.strokeStyle = '#C8A84B';
+          ctx.globalAlpha = (1 - d / 100) * 0.08;
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
+      }
+    }
+    ctx.globalAlpha = 1;
+    requestAnimationFrame(drawParticles);
+  }
+  drawParticles();
+
+  // ===== HERO ANIMATIONS =====
+  var heroTl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+  heroTl
+    .to('.hero-badge', { opacity: 1, y: 0, duration: 0.6, delay: 0.5 })
+    .to('.hero h1', { opacity: 1, y: 0, duration: 0.8 }, '-=0.3')
+    .to('.hero p', { opacity: 1, y: 0, duration: 0.7 }, '-=0.4')
+    .to('.hero-buttons', { opacity: 1, y: 0, duration: 0.6 }, '-=0.3')
+    .to('.hero-powered', { opacity: 1, duration: 0.5 }, '-=0.2');
+
+  // Set initial states
+  gsap.set('.hero-badge', { opacity: 0, y: 30 });
+  gsap.set('.hero h1', { opacity: 0, y: 50 });
+  gsap.set('.hero p', { opacity: 0, y: 40 });
+  gsap.set('.hero-buttons', { opacity: 0, y: 30 });
+  gsap.set('.hero-powered', { opacity: 0 });
+
+  // Replay timeline from beginning
+  heroTl.play();
+
+  // ===== SCROLL ANIMATIONS =====
+
+  // Features
+  gsap.utils.toArray('.feature-card').forEach(function(card, i) {
+    gsap.from(card, {
+      scrollTrigger: { trigger: card, start: 'top 85%', toggleActions: 'play none none reverse' },
+      opacity: 0, y: 60, duration: 0.8, delay: i * 0.15
+    });
+  });
+
+  // Section headers
+  gsap.utils.toArray('.section-label, .section-title, .section-sub').forEach(function(el) {
+    gsap.from(el, {
+      scrollTrigger: { trigger: el, start: 'top 88%', toggleActions: 'play none none reverse' },
+      opacity: 0, y: 40, duration: 0.7
+    });
+  });
+
+  // Steps
+  gsap.utils.toArray('.step').forEach(function(step, i) {
+    gsap.from(step, {
+      scrollTrigger: { trigger: step, start: 'top 85%', toggleActions: 'play none none reverse' },
+      opacity: 0, y: 50, scale: 0.9, duration: 0.7, delay: i * 0.2
+    });
+  });
+
+  // ===== STATS COUNTER =====
+  var countersDone = false;
+  ScrollTrigger.create({
+    trigger: '#stats',
+    start: 'top 75%',
+    onEnter: function() {
+      if (countersDone) return;
+      countersDone = true;
+      document.querySelectorAll('.counter').forEach(function(el) {
+        var target = parseFloat(el.getAttribute('data-target'));
+        var decimals = parseInt(el.getAttribute('data-decimals')) || 0;
+        var obj = { val: 0 };
+        gsap.to(obj, {
+          val: target,
+          duration: 2,
+          ease: 'power2.out',
+          onUpdate: function() {
+            if (decimals > 0) {
+              el.textContent = obj.val.toFixed(decimals);
+            } else {
+              el.textContent = Math.floor(obj.val).toLocaleString();
+            }
+          }
+        });
+      });
+    }
+  });
+
+  // Stats items fade in
+  gsap.utils.toArray('.stat-item').forEach(function(item, i) {
+    gsap.from(item, {
+      scrollTrigger: { trigger: item, start: 'top 85%' },
+      opacity: 0, y: 40, duration: 0.6, delay: i * 0.12
+    });
+  });
+
+  // CTA Section
+  gsap.from('.cta-section h2', {
+    scrollTrigger: { trigger: '.cta-section', start: 'top 80%' },
+    opacity: 0, y: 50, duration: 0.8
+  });
+  gsap.from('.cta-section p', {
+    scrollTrigger: { trigger: '.cta-section', start: 'top 75%' },
+    opacity: 0, y: 40, duration: 0.7, delay: 0.2
+  });
+  gsap.from('.btn-cta', {
+    scrollTrigger: { trigger: '.btn-cta', start: 'top 90%' },
+    opacity: 0, scale: 0.8, duration: 0.6, delay: 0.3
+  });
+
+  // ===== PARALLAX =====
+  gsap.to('.hero-content', {
+    scrollTrigger: {
+      trigger: '.hero',
+      start: 'top top',
+      end: 'bottom top',
+      scrub: true
+    },
+    y: 100,
+    opacity: 0.3
+  });
+
+})();
+</script>
+</body>
+</html>

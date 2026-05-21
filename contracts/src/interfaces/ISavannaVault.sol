@@ -31,6 +31,15 @@ interface ISavannaVault {
     /// @notice Emitted when a timed-out request is cancelled
     event RequestCancelled(address indexed user, uint256 timestamp);
 
+    /// @notice Emitted when a cross-chain deposit is received via LI.FI bridge
+    event CrossChainDepositReceived(
+        address indexed depositor,
+        uint256 sourceChainId,
+        uint256 amount,
+        address bridgeToken,
+        uint256 shares
+    );
+
     // ============ User Actions ============
 
     /// @notice Request AI-powered yield optimization for deposited funds
@@ -63,4 +72,7 @@ interface ISavannaVault {
 
     /// @notice Total deployed across all strategies
     function totalDeployed() external view returns (uint256);
+
+    /// @notice Get cross-chain deposit record
+    function getCrossChainDeposit(uint256 index) external view returns (DataTypes.CrossChainDeposit memory);
 }

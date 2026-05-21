@@ -68,6 +68,19 @@ library Errors {
     /// @notice Oracle response validation failed
     error Savanna__OracleValidationFailed(string reason);
 
+    // ============ Cross-Chain Errors ============
+
+    /// @notice Cross-chain deposit caller is not the authorized bridge receiver
+    error Savanna__OnlyBridgeReceiver();
+    /// @notice Cross-chain deposit source chain not allowed
+    error Savanna__SourceChainNotAllowed(uint256 chainId);
+    /// @notice Cross-chain deposit bridge token not supported
+    error Savanna__BridgeTokenNotSupported(address token);
+    /// @notice Cross-chain deposit amount below minimum
+    error Savanna__CrossChainDepositBelowMin(uint256 amount, uint256 minimum);
+    /// @notice Swap to vault asset failed
+    error Savanna__SwapFailed(bytes reason);
+
     // ============ Admin Errors ============
 
     /// @notice Caller is not the owner

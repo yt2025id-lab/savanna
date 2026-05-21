@@ -26,10 +26,16 @@ contract SavannaVault is ERC4626, Ownable, ISavannaVault, ReentrancyGuard, Pausa
 
     /// @notice Controller contract address
     address public controller;
+    /// @notice Cross-chain receiver contract address (LI.FI bridge receiver)
+    address public crossChainReceiver;
     /// @notice User address => active strategy request flag
     mapping(address => bool) private _activeRequests;
     /// @notice User address => position data
     mapping(address => DataTypes.UserPosition) private _positions;
+    /// @notice Cross-chain deposit records
+    mapping(uint256 => DataTypes.CrossChainDeposit) private _crossChainDeposits;
+    /// @notice Total cross-chain deposits count
+    uint256 public totalCrossChainDeposits;
     /// @notice Total amount currently deployed across all strategies
     uint256 public override totalDeployed;
     /// @notice Total number of active positions
@@ -50,6 +56,13 @@ contract SavannaVault is ERC4626, Ownable, ISavannaVault, ReentrancyGuard, Pausa
     function setController(address controller_) external onlyOwner {
         if (controller_ == address(0)) revert Errors.Savanna__ZeroAddress();
         controller = controller_;
+    }
+
+    /// @notice Set the cross-chain receiver address (LI.FI bridge receiver)
+    /// @param receiver_ Address of the SavannaCrossChainReceiver contract
+    function setCrossChainReceiver(address receiver_) external onlyOwner {
+        if (receiver_ == address(0)) revert Errors.Savanna__ZeroAddress();
+        crossChainReceiver = receiver_;
     }
 
     /// @notice Pause deposits and strategy requests
@@ -83,6 +96,41 @@ contract SavannaVault is ERC4626, Ownable, ISavannaVault, ReentrancyGuard, Pausa
 
         shares = super.deposit(assets, receiver);
         emit Deposited(receiver, assets, shares);
+    }
+
+    /// @notice Deposit from cross-chain bridge receiver (LI.FI)
+    /// @dev Called by the authorized CrossChainReceiver after bridging
+    /// @param assets Amount of vault asset to deposit
+    /// @param receiver Address to receive shares (original depositor on source chain)
+    /// @param sourceChainId The source chain ID
+    /// @param bridgeToken The original token that was bridged
+    /// @return shares Number of svYLD shares minted
+    function crossChainDeposit(
+        uint256 assets,
+        address receiver,
+        uint256 sourceChainId,
+        address bridgeToken
+    ) external nonReentrant whenNotPaused returns (uint256 shares) {
+        if (crossChainReceiver == address(0)) revert Errors.Savanna__OnlyBridgeReceiver();
+        if (msg.sender != crossChainReceiver) revert Errors.Savanna__OnlyBridgeReceiver();
+        if (assets < Constants.MIN_DEPOSIT) {
+            revert Errors.Savanna__InsufficientDeposit(assets, Constants.MIN_DEPOSIT);
+        }
+
+        shares = super.deposit(assets, receiver);
+        emit Deposited(receiver, assets, shares);
+        emit CrossChainDepositReceived(receiver, sourceChainId, assets, bridgeToken, shares);
+
+        // Record cross-chain deposit
+        _crossChainDeposits[totalCrossChainDeposits] = DataTypes.CrossChainDeposit({
+            depositor: receiver,
+            sourceChainId: sourceChainId,
+            amount: assets,
+            timestamp: block.timestamp,
+            bridgeToken: bridgeToken,
+            processed: true
+        });
+        totalCrossChainDeposits++;
     }
 
     /// @notice Override withdraw to handle active positions
@@ -249,6 +297,11 @@ contract SavannaVault is ERC4626, Ownable, ISavannaVault, ReentrancyGuard, Pausa
     /// @notice Total assets includes both idle vault balance and deployed strategy funds
     function totalAssets() public view override returns (uint256) {
         return IERC20(asset()).balanceOf(address(this)) + totalDeployed;
+    }
+
+    /// @notice Get cross-chain deposit record by index
+    function getCrossChainDeposit(uint256 index) external view returns (DataTypes.CrossChainDeposit memory) {
+        return _crossChainDeposits[index];
     }
 
     /// @notice Get max deposit (respects pause state)

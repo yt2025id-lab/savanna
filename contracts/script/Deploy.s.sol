@@ -9,6 +9,7 @@ import {MockPriceFeed} from "../src/mocks/MockPriceFeed.sol";
 import {SavannaVault} from "../src/vault/SavannaVault.sol";
 import {SavannaController} from "../src/controller/SavannaController.sol";
 import {SavannaFeedConsumer} from "../src/feeds/SavannaFeedConsumer.sol";
+import {SavannaCrossChainReceiver} from "../src/crosschain/SavannaCrossChainReceiver.sol";
 import {AaveV3Strategy} from "../src/strategies/AaveV3Strategy.sol";
 import {MoolaStrategy} from "../src/strategies/MoolaStrategy.sol";
 import {CompoundV3Strategy} from "../src/strategies/CompoundV3Strategy.sol";
@@ -42,6 +43,7 @@ contract Deploy is Script {
         address vault;
         address controller;
         address feedConsumer;
+        address crossChainReceiver;
         address aaveStrategy;
         address moolaStrategy;
         address compoundStrategy;
@@ -139,6 +141,32 @@ contract Deploy is Script {
         controller.setPriceFeed(asset, address(mockFeed));
         console2.log("=> Price feeds registered");
 
+        // ============ 7. Deploy Cross-Chain Receiver ============
+
+        SavannaCrossChainReceiver crossChainReceiver =
+            new SavannaCrossChainReceiver(deployed.vault, deployer);
+        deployed.crossChainReceiver = address(crossChainReceiver);
+        console2.log("7. SavannaCrossChainReceiver:", deployed.crossChainReceiver);
+
+        // ============ 8. Wire Cross-Chain ============
+
+        // Set cross-chain receiver on vault
+        vault.setCrossChainReceiver(deployed.crossChainReceiver);
+        console2.log("=> Cross-chain receiver set on vault");
+
+        // Allow major chains as source for cross-chain deposits
+        uint256[] memory allowedChains = new uint256[](8);
+        allowedChains[0] = 1; // Ethereum Mainnet
+        allowedChains[1] = 42161; // Arbitrum One
+        allowedChains[2] = 10; // Optimism
+        allowedChains[3] = 137; // Polygon
+        allowedChains[4] = 8453; // Base
+        allowedChains[5] = 56; // BSC
+        allowedChains[6] = 43114; // Avalanche
+        allowedChains[7] = 11142220; // Celo Sepolia
+        crossChainReceiver.setSourceChains(allowedChains, true);
+        console2.log("=> Source chains allowed (ETH, ARB, OP, MATIC, BASE, BSC, AVAX, CELO_SEPOLIA)");
+
         vm.stopBroadcast();
 
         console2.log("");
@@ -148,6 +176,7 @@ contract Deploy is Script {
         console2.log("Vault:", deployed.vault);
         console2.log("Controller:", deployed.controller);
         console2.log("FeedConsumer:", deployed.feedConsumer);
+        console2.log("CrossChainReceiver:", deployed.crossChainReceiver);
         console2.log("AaveV3:", deployed.aaveStrategy);
         console2.log("Reserve:", deployed.reserveStrategy);
 

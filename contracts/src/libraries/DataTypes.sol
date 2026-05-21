@@ -55,4 +55,16 @@ library DataTypes {
         uint8 decimals;             // Feed decimals
         bool stale;                 // Whether the price is stale
     }
+
+    // ============ Cross-Chain ============
+
+    /// @notice Cross-chain deposit record for tracking bridged deposits
+    struct CrossChainDeposit {
+        address depositor;          // Original depositor on source chain
+        uint256 sourceChainId;      // Source chain ID
+        uint256 amount;             // Amount deposited after bridge
+        uint256 timestamp;          // Deposit timestamp
+        address bridgeToken;        // Token received from bridge (before swap)
+        bool processed;             // Whether deposit has been processed
+    }
 }

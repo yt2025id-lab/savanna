@@ -21,7 +21,7 @@ export default function EarnPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold tracking-tight">Earn</h1>
         <p className="mt-1 text-sm text-muted">
-          Deposit stablecoins, let AI optimize your yield across Celo lending protocols
+          Deposit stablecoins from any chain, let AI optimize your yield across Celo lending protocols
         </p>
       </div>
 

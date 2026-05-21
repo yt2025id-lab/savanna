@@ -8,6 +8,7 @@ import { clsx } from "clsx";
 import { useVaultData } from "@/hooks/useVaultData";
 import { useToast } from "@/components/Toast";
 import { SAVANNA_VAULT_ABI, ERC20_ABI } from "@/config/abis";
+import { CrossChainDeposit } from "@/components/CrossChainDeposit";
 
 export function DepositCard() {
   const { isConnected, address } = useAccount();
@@ -286,6 +287,13 @@ export function DepositCard() {
           >
             {tab === "deposit" ? "Deposit" : "Withdraw"}
           </button>
+        )}
+
+        {/* Cross-Chain Deposit (LI.FI) */}
+        {tab === "deposit" && (
+          <div className="pt-1">
+            <CrossChainDeposit />
+          </div>
         )}
       </div>
     </div>
