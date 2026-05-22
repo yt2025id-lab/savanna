@@ -3,31 +3,44 @@
 import { useState, useCallback } from "react";
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { formatUnits } from "viem";
-import { SAVANNA_VAULT_ABI } from "@/config/abis";
+import { SAVANNA_VAULT_ABI, SAVANNA_CONTROLLER_ABI } from "@/config/abis";
 import { getContracts } from "@/config/contracts";
 import { useVaultData } from "@/hooks/useVaultData";
-import { ListChecks, Loader2, AlertCircle, CheckCircle2, ArrowUpFromLine } from "lucide-react";
+import { ListChecks, Loader2, AlertCircle, CheckCircle2, ArrowUpFromLine, AlertTriangle } from "lucide-react";
 import clsx from "clsx";
 
 export function ActivePositions() {
   const { address, chainId: activeChainId } = useAccount();
   const chainId = activeChainId ?? 11142220;
   const contracts = getContracts(chainId);
-  const { userShares, sharesInAssets, userPosition, tokenDecimals, isLoading } = useVaultData();
+  const { userShares, sharesInAssets, userPosition, tokenDecimals, isLoading, tokenSymbol } = useVaultData();
 
   const [withdrawing, setWithdrawing] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [done, setDone] = useState(false);
 
+  // Withdraw from vault (ERC-4626)
   const {
     writeContract: withdrawWrite,
     data: withdrawHash,
     isPending: withdrawPending,
   } = useWriteContract();
 
+  // Withdraw from strategy (controller)
+  const {
+    writeContract: withdrawStrategyWrite,
+    data: withdrawStrategyHash,
+    isPending: withdrawStrategyPending,
+  } = useWriteContract();
+
   const { isLoading: withdrawConfirming, isSuccess: withdrawSuccess } = useWaitForTransactionReceipt({
     hash: withdrawHash,
     query: { enabled: !!withdrawHash },
+  });
+
+  const { isLoading: withdrawStrategyConfirming, isSuccess: withdrawStrategySuccess } = useWaitForTransactionReceipt({
+    hash: withdrawStrategyHash,
+    query: { enabled: !!withdrawStrategyHash },
   });
 
   if (withdrawSuccess && withdrawing) {
@@ -36,6 +49,13 @@ export function ActivePositions() {
     setTimeout(() => setDone(false), 3000);
   }
 
+  if (withdrawStrategySuccess && withdrawing) {
+    setWithdrawing(false);
+    setDone(true);
+    setTimeout(() => setDone(false), 3000);
+  }
+
+  // Withdraw from vault — only works if no active strategy
   const handleWithdraw = useCallback(() => {
     if (!address || !sharesInAssets) return;
     setErrorMsg("");
@@ -50,14 +70,37 @@ export function ActivePositions() {
       {
         onSuccess: () => {},
         onError: (err) => {
-          setErrorMsg(err.message.slice(0, 100));
+          setErrorMsg(err.message.slice(0, 120));
           setWithdrawing(false);
         },
       },
     );
   }, [address, sharesInAssets, contracts, withdrawWrite]);
 
+  // Withdraw from strategy first, then vault
+  const handleWithdrawFromStrategy = useCallback(() => {
+    if (!address) return;
+    setErrorMsg("");
+    setWithdrawing(true);
+    withdrawStrategyWrite(
+      {
+        address: contracts.controller,
+        abi: SAVANNA_CONTROLLER_ABI,
+        functionName: "withdrawFromStrategy",
+        args: [address],
+      },
+      {
+        onSuccess: () => {},
+        onError: (err) => {
+          setErrorMsg(err.message.slice(0, 120));
+          setWithdrawing(false);
+        },
+      },
+    );
+  }, [address, contracts, withdrawStrategyWrite]);
+
   const hasPosition = userShares && userShares > BigInt(0);
+  const isActive = userPosition?.isActive;
 
   // Format helpers
   const fmt = (val: bigint | undefined) => {
@@ -74,7 +117,7 @@ export function ActivePositions() {
        Number(formatUnits(userPosition.depositAmount, tokenDecimals)))
     : 0;
 
-  const isActive = userPosition?.isActive;
+  const isBusy = withdrawing || withdrawPending || withdrawConfirming || withdrawStrategyPending || withdrawStrategyConfirming;
 
   return (
     <div className="rounded-2xl border border-border bg-card overflow-hidden">
@@ -104,15 +147,15 @@ export function ActivePositions() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
                 <div>
                   <p className="text-[10px] text-muted uppercase tracking-wider">Asset</p>
-                  <p className="text-sm font-semibold text-foreground">USDC</p>
+                  <p className="text-sm font-semibold text-foreground">{tokenSymbol}</p>
                 </div>
                 <div>
                   <p className="text-[10px] text-muted uppercase tracking-wider">Deposited</p>
-                  <p className="text-sm font-semibold text-foreground">${fmt(userPosition?.depositAmount)}</p>
+                  <p className="text-sm font-semibold text-foreground">{fmt(userPosition?.depositAmount)}</p>
                 </div>
                 <div>
                   <p className="text-[10px] text-muted uppercase tracking-wider">Current Value</p>
-                  <p className="text-sm font-semibold text-accent">${fmt(sharesInAssets)}</p>
+                  <p className="text-sm font-semibold text-accent">{fmt(sharesInAssets)}</p>
                 </div>
                 <div>
                   <p className="text-[10px] text-muted uppercase tracking-wider">Earnings</p>
@@ -120,44 +163,44 @@ export function ActivePositions() {
                     "text-sm font-semibold",
                     earningsValue >= 0 ? "text-accent" : "text-danger"
                   )}>
-                    {earningsValue >= 0 ? "+" : ""}${earningsValue.toFixed(2)}
+                    {earningsValue >= 0 ? "+" : ""}{earningsValue.toFixed(2)} {tokenSymbol}
                   </p>
                 </div>
               </div>
 
-              {/* Strategy info with protocol name */}
+              {/* Strategy info — single, clean */}
               {isActive && userPosition?.activeStrategy && (
                 <div className="flex items-center gap-2 mb-3 px-1">
                   <span className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
-                  <span className="text-[11px] text-accent">
-                    Strategy active
-                  </span>
+                  <span className="text-[11px] text-accent font-medium">Strategy active</span>
                   <span className="text-[10px] text-muted font-mono">
                     ({userPosition.activeStrategy.slice(0, 6)}...{userPosition.activeStrategy.slice(-4)})
                   </span>
                 </div>
               )}
 
-              {/* Strategy info */}
-              {isActive && userPosition?.activeStrategy && (
-                <div className="flex items-center gap-2 mb-3 px-1">
-                  <span className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
-                  <span className="text-[11px] text-accent">
-                    Strategy active: {userPosition.activeStrategy.slice(0, 6)}...{userPosition.activeStrategy.slice(-4)}
-                  </span>
+              {/* Warning if strategy active */}
+              {isActive && (
+                <div className="flex items-start gap-2 rounded-lg bg-warning-dim p-2.5 mb-3">
+                  <AlertTriangle className="h-3.5 w-3.5 text-warning shrink-0 mt-0.5" />
+                  <p className="text-[11px] text-warning/80">
+                    Funds are deployed in a strategy. Withdraw will pull funds from the strategy first.
+                  </p>
                 </div>
               )}
 
               {/* Withdraw button */}
               <button
-                onClick={handleWithdraw}
-                disabled={withdrawing || withdrawPending || withdrawConfirming || !sharesInAssets}
+                onClick={isActive ? handleWithdrawFromStrategy : handleWithdraw}
+                disabled={isBusy || !sharesInAssets}
                 className={clsx(
                   "w-full py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 cursor-pointer",
                   done
                     ? "bg-accent-dim text-accent border border-accent/30"
-                    : withdrawing || withdrawPending || withdrawConfirming
+                    : isBusy
                     ? "bg-card text-accent/50 cursor-wait"
+                    : isActive
+                    ? "bg-warning text-white hover:opacity-90"
                     : "bg-card text-accent border border-border hover:border-accent/30 hover:bg-card-hover"
                 )}
               >
@@ -166,15 +209,15 @@ export function ActivePositions() {
                     <CheckCircle2 className="h-4 w-4" />
                     Withdrawn!
                   </>
-                ) : withdrawing || withdrawPending || withdrawConfirming ? (
+                ) : isBusy ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Withdrawing...
+                    {isActive ? "Withdrawing from strategy..." : "Withdrawing..."}
                   </>
                 ) : (
                   <>
                     <ArrowUpFromLine className="h-4 w-4" />
-                    Withdraw
+                    {isActive ? "Withdraw from Strategy" : "Withdraw"}
                   </>
                 )}
               </button>

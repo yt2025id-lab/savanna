@@ -11,8 +11,9 @@ import clsx from "clsx";
 
 const ASSETS = [
   { symbol: "USDC", label: "USD Coin", decimals: 6, apy: "18.5" },
-  { symbol: "CELO", label: "Celo Native", decimals: 18, apy: "12.3" },
-  { symbol: "cUSD", label: "Celo Dollar", decimals: 18, apy: "15.8" },
+  // CELO and cUSD support coming soon — vault currently only accepts USDC
+  // { symbol: "CELO", label: "Celo Native", decimals: 18, apy: "12.3" },
+  // { symbol: "cUSD", label: "Celo Dollar", decimals: 18, apy: "15.8" },
 ] as const;
 
 type AssetSymbol = (typeof ASSETS)[number]["symbol"];
