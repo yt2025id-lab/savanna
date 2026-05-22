@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
-import { parseUnits, formatUnits } from "viem";
+import { formatUnits } from "viem";
 import { SAVANNA_VAULT_ABI } from "@/config/abis";
 import { getContracts } from "@/config/contracts";
 import { useVaultData } from "@/hooks/useVaultData";
