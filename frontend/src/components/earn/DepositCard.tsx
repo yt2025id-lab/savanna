@@ -267,15 +267,24 @@ export function DepositCard() {
         )}
       </div>
 
-      {/* LI.FI Placeholder */}
+      {/* Cross-chain shortcut */}
       <div className="border-t border-border px-5 py-4">
-        <div className="flex items-center justify-center gap-2 rounded-xl bg-accent-dim/50 border border-dashed border-accent/20 py-5">
+        <a
+          href="#"
+          onClick={(e) => {
+            e.preventDefault();
+            // Scroll to cross-chain section
+            const el = document.querySelector("[data-cross-chain-deposit]");
+            el?.scrollIntoView({ behavior: "smooth", block: "center" });
+          }}
+          className="flex items-center justify-center gap-2 rounded-xl bg-accent-dim/50 border border-dashed border-accent/20 py-4 transition-all hover:border-accent/40 hover:bg-accent-dim cursor-pointer"
+        >
           <span className="text-lg">🌉</span>
           <div className="text-center">
-            <p className="text-sm text-muted-light">Cross-chain deposit coming soon</p>
-            <p className="text-[10px] text-muted mt-0.5">via LI.FI integration</p>
+            <p className="text-sm text-muted-light">Bridge from another chain</p>
+            <p className="text-[10px] text-muted mt-0.5">via LI.FI — 60+ chains supported</p>
           </div>
-        </div>
+        </a>
       </div>
     </div>
   );

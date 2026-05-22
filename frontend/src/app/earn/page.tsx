@@ -5,8 +5,12 @@ import { StatsBar } from "@/components/earn/StatsBar";
 import { DepositCard } from "@/components/earn/DepositCard";
 import { ActivePositions } from "@/components/earn/ActivePositions";
 import { YieldHistory } from "@/components/earn/YieldHistory";
+import { StrategyRequest } from "@/components/StrategyRequest";
+import { CrossChainDeposit } from "@/components/CrossChainDeposit";
+import { TransactionHistory } from "@/components/TransactionHistory";
+import { ProtocolCards } from "@/components/ProtocolCards";
 import { useVaultData } from "@/hooks/useVaultData";
-import { TrendingUp, Wallet, Clock, Zap } from "lucide-react";
+import { TrendingUp, Wallet, Zap } from "lucide-react";
 
 export default function EarnPage() {
   const { address, isConnected } = useAccount();
@@ -67,24 +71,30 @@ export default function EarnPage() {
 
       {/* Main Grid */}
       <div className="grid gap-6 lg:grid-cols-5">
-        {/* Left column — Deposit + Active Positions */}
+        {/* Left column — Deposit + Strategy + Positions */}
         <div className="lg:col-span-2 space-y-5">
           <div className="animate-fade-in" style={{ animationDelay: "0.15s" }}>
             <DepositCard />
           </div>
           <div className="animate-fade-in" style={{ animationDelay: "0.2s" }}>
+            <CrossChainDeposit />
+          </div>
+          <div className="animate-fade-in" style={{ animationDelay: "0.25s" }}>
+            <StrategyRequest />
+          </div>
+          <div className="animate-fade-in" style={{ animationDelay: "0.3s" }}>
             <ActivePositions />
           </div>
         </div>
 
-        {/* Right column — Yield History */}
+        {/* Right column — Yield History + Protocol Stats + Activity */}
         <div className="lg:col-span-3 space-y-5">
-          <div className="animate-fade-in" style={{ animationDelay: "0.25s" }}>
+          <div className="animate-fade-in" style={{ animationDelay: "0.2s" }}>
             <YieldHistory />
           </div>
 
           {/* Protocol Stats */}
-          <div className="animate-fade-in rounded-2xl border border-border bg-card p-5" style={{ animationDelay: "0.3s" }}>
+          <div className="animate-fade-in rounded-2xl border border-border bg-card p-5" style={{ animationDelay: "0.25s" }}>
             <h3 className="text-sm font-semibold text-foreground mb-4">Protocol Stats</h3>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div>
@@ -124,6 +134,16 @@ export default function EarnPage() {
                 </span>
               </div>
             </div>
+          </div>
+
+          {/* Supported Protocols */}
+          <div className="animate-fade-in" style={{ animationDelay: "0.3s" }}>
+            <ProtocolCards />
+          </div>
+
+          {/* Transaction History */}
+          <div className="animate-fade-in" style={{ animationDelay: "0.35s" }}>
+            <TransactionHistory />
           </div>
         </div>
       </div>

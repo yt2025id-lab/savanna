@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { useAccount } from "wagmi";
+import { useAccount, useReadContract } from "wagmi";
+import { formatUnits } from "viem";
 import { ArrowDownToLine, ArrowUpFromLine, Zap, Clock } from "lucide-react";
 import { clsx } from "clsx";
+import { SAVANNA_VAULT_ABI } from "@/config/abis";
+import { getContracts } from "@/config/contracts";
 
 interface TxEntry {
   type: "deposit" | "withdraw" | "strategy" | "pending";
@@ -15,13 +17,69 @@ interface TxEntry {
 }
 
 export function TransactionHistory() {
-  const { isConnected } = useAccount();
+  const { isConnected, address, chainId: activeChainId } = useAccount();
+  const chainId = activeChainId ?? 11142220;
+  const contracts = getContracts(chainId);
 
-  // This would be populated from on-chain events or indexer
-  // For now showing a placeholder
-  const [entries] = useState<TxEntry[]>([]);
+  // Read user position for activity display
+  const { data: userPosition } = useReadContract({
+    address: contracts.vault,
+    abi: SAVANNA_VAULT_ABI,
+    functionName: "getUserPosition",
+    args: address ? [address] : undefined,
+  });
 
-  if (!isConnected) return null;
+  const { data: hasActiveRequest } = useReadContract({
+    address: contracts.vault,
+    abi: SAVANNA_VAULT_ABI,
+    functionName: "hasActiveRequest",
+    args: address ? [address] : undefined,
+  });
+
+  if (!isConnected || !address) return null;
+
+  // Build activity entries from on-chain position data
+  const entries: TxEntry[] = [];
+
+  const pos = userPosition as any;
+  if (pos) {
+    // If user has a deposit, show it
+    if (pos.depositAmount && pos.depositAmount > BigInt(0)) {
+      entries.push({
+        type: "deposit",
+        amount: Number(formatUnits(pos.depositAmount, 6)).toLocaleString(undefined, { maximumFractionDigits: 2 }),
+        timestamp: pos.depositTimestamp > BigInt(0)
+          ? new Date(Number(pos.depositTimestamp) * 1000).toLocaleDateString()
+          : "—",
+        status: "confirmed",
+      });
+    }
+
+    // If strategy is active
+    if (pos.isActive && pos.allocatedAmount > BigInt(0)) {
+      entries.push({
+        type: "strategy",
+        amount: Number(formatUnits(pos.allocatedAmount, 6)).toLocaleString(undefined, { maximumFractionDigits: 2 }),
+        timestamp: pos.depositTimestamp > BigInt(0)
+          ? new Date(Number(pos.depositTimestamp) * 1000).toLocaleDateString()
+          : "—",
+        status: "confirmed",
+        protocol: pos.activeStrategy !== "0x0000000000000000000000000000000000000000"
+          ? `${pos.activeStrategy.slice(0, 6)}...`
+          : undefined,
+      });
+    }
+  }
+
+  // If user has active request, show pending
+  if (hasActiveRequest) {
+    entries.push({
+      type: "pending",
+      amount: "—",
+      timestamp: "Now",
+      status: "pending",
+    });
+  }
 
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden">
@@ -69,7 +127,7 @@ export function TransactionHistory() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-medium capitalize">
-                    {tx.type === "strategy" ? "Strategy Deployed" : tx.type}
+                    {tx.type === "strategy" ? "Strategy Deployed" : tx.type === "pending" ? "Pending Request" : tx.type}
                   </span>
                   {tx.protocol && (
                     <span className="text-[10px] text-accent bg-accent-dim px-1.5 py-0.5 rounded-full">

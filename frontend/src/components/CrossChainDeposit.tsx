@@ -29,11 +29,12 @@ export function CrossChainDeposit() {
     <>
       {/* Trigger Button */}
       <button
+        data-cross-chain-deposit
         onClick={() => {
           setIsOpen(true);
           setBridgeStatus("idle");
         }}
-        className="flex w-full items-center justify-center gap-2 rounded-lg border border-accent/30 bg-accent-dim py-3 text-sm font-semibold text-accent transition-all hover:bg-accent/15 hover:border-accent/50"
+        className="flex w-full items-center justify-center gap-2 rounded-xl border border-accent/30 bg-accent-dim py-3 text-sm font-semibold text-accent transition-all hover:bg-accent/15 hover:border-accent/50 cursor-pointer"
       >
         <Globe className="h-4 w-4" />
         Deposit from Another Chain
