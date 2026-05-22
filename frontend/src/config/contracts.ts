@@ -30,6 +30,36 @@ export function getContracts(chainId: number) {
   return CONTRACTS[chainId as ChainId] ?? CONTRACTS[11142220];
 }
 
+/**
+ * Returns the block explorer base URL for the given chain.
+ * Celo Mainnet  → https://celoscan.io
+ * Celo Alfajores → https://alfajores.celoscan.io
+ * Celo Sepolia  → https://sepolia.celoscan.io
+ * Fallback      → https://celoscan.io
+ */
+export function getExplorerUrl(chainId?: number): string {
+  switch (chainId) {
+    case 42220:
+      return "https://celoscan.io";
+    case 44787:
+      return "https://alfajores.celoscan.io";
+    case 11142220:
+      return "https://sepolia.celoscan.io";
+    default:
+      return "https://celoscan.io";
+  }
+}
+
+/** Convenience: full transaction URL */
+export function getTxUrl(txHash: string, chainId?: number): string {
+  return `${getExplorerUrl(chainId)}/tx/${txHash}`;
+}
+
+/** Convenience: full address URL */
+export function getAddressUrl(address: string, chainId?: number): string {
+  return `${getExplorerUrl(chainId)}/address/${address}`;
+}
+
 // LI.FI Configuration
 export const LIFI_CONFIG = {
   integrator: "savanna-finance",

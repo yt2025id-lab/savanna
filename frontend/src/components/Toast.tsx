@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState, createContext, useContext, useCallback } from "react";
+import { useAccount } from "wagmi";
 import { CheckCircle2, AlertCircle, X, Info } from "lucide-react";
 import { clsx } from "clsx";
+import { getTxUrl } from "@/config/contracts";
 
 type ToastType = "success" | "error" | "info";
 
@@ -26,6 +28,7 @@ export function useToast() {
 }
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
+  const { chainId } = useAccount();
   const [toasts, setToasts] = useState<Toast[]>([]);
   let counter = 0;
 
@@ -74,12 +77,12 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               </p>
               {toast.txHash && (
                 <a
-                  href={`https://sepolia.celoscan.io/tx/${toast.txHash}`}
+                  href={getTxUrl(toast.txHash, chainId)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-[10px] text-accent hover:underline"
                 >
-                  View on Explorer →
+                  View on CeloScan →
                 </a>
               )}
             </div>
