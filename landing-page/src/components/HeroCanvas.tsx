@@ -45,49 +45,74 @@ const FRAGMENT_SHADER = `
     vec2 uv = gl_FragCoord.xy / u_resolution;
     float t = u_time * 0.15;
 
+    // Base gradient: #0D1A0F → #1A2E1C
     vec3 col = mix(
-      vec3(0.05, 0.10, 0.06),
-      vec3(0.08, 0.14, 0.09),
+      vec3(0.051, 0.102, 0.059),  // #0D1A0F
+      vec3(0.102, 0.18, 0.11),    // #1A2E1C
       uv.y
     );
 
+    // FBM noise layers for organic movement
     float n1 = fbm(uv * 3.0 + vec2(t * 0.3, t * 0.1));
     float n2 = fbm(uv * 5.0 - vec2(t * 0.2, t * 0.15));
+    float n3 = fbm(uv * 8.0 + vec2(t * 0.1, -t * 0.2));
 
-    vec3 gold = vec3(0.784, 0.659, 0.294);
+    // Golden layer
+    vec3 gold = vec3(0.784, 0.659, 0.294); // #C8A84B
     col += gold * n1 * 0.06;
 
-    vec3 green = vec3(0.290, 0.486, 0.351);
+    // Green layer
+    vec3 green = vec3(0.290, 0.486, 0.351); // #4A7C59
     col += green * n2 * 0.08;
 
-    for (int i = 0; i < 12; i++) {
+    // Subtle cream layer
+    vec3 cream = vec3(0.91, 0.835, 0.639); // #E8D5A3
+    col += cream * n3 * 0.02;
+
+    // Mouse interactive glow
+    vec2 mouseUV = u_mouse / u_resolution;
+    float mouseDist = length(uv - mouseUV);
+    col += gold * 0.04 / (mouseDist + 0.5);
+
+    // Glowing orbs — savanna golden lights
+    for (int i = 0; i < 8; i++) {
       float fi = float(i);
       vec2 pos = vec2(
-        hash(vec2(fi, 0.0)) + sin(t * (0.5 + fi * 0.1)) * 0.3,
-        hash(vec2(0.0, fi)) + cos(t * (0.3 + fi * 0.07)) * 0.2
+        hash(vec2(fi, 0.0)) + sin(t * (0.2 + fi * 0.05)) * 0.15,
+        hash(vec2(0.0, fi)) + cos(t * (0.15 + fi * 0.04)) * 0.1
       );
       float dist = length(uv - pos);
-      float glow = 0.002 / (dist * dist + 0.01);
-      glow *= 0.3;
+      float glow = 0.002 / (dist * dist + 0.015);
+      glow *= 0.25;
       col += gold * glow * 0.5;
     }
 
-    vec2 mouseUV = u_mouse / u_resolution;
-    float mouseDist = length(uv - mouseUV);
-    col += gold * 0.03 / (mouseDist + 0.5);
+    // Extra large soft glow
+    float orb1 = smoothstep(0.35, 0.0,
+      length(uv - vec2(0.3 + sin(t * 0.5) * 0.1, 0.4 + cos(t * 0.3) * 0.05)));
+    float orb2 = smoothstep(0.25, 0.0,
+      length(uv - vec2(0.7 + cos(t * 0.4) * 0.08, 0.6 + sin(t * 0.35) * 0.06)));
+    col += gold * orb1 * 0.12;
+    col += green * orb2 * 0.08;
 
-    float vig = 1.0 - length(uv - 0.5) * 0.8;
+    // Subtle noise grain texture
+    float grain = hash(uv * 50.0 + t * 0.05);
+    col += grain * 0.015;
+
+    // Vignette
+    float vig = 1.0 - length(uv - 0.5) * 0.7;
     col *= vig;
 
+    // Grass at bottom
     float grass = noise(vec2(uv.x * 30.0, uv.y * 3.0 + t * 0.5));
     float grassMask = smoothstep(0.15, 0.0, uv.y) * grass;
-    col += green * grassMask * 0.15;
+    col += green * grassMask * 0.2;
 
     gl_FragColor = vec4(col, 1.0);
   }
 `;
 
-export function Background() {
+export function HeroCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const mouseRef = useRef({ x: 0, y: 0 });
 
@@ -140,7 +165,7 @@ export function Background() {
       mouseRef.current.x = e.clientX - rect.left;
       mouseRef.current.y = canvas!.height - (e.clientY - rect.top);
     }
-    canvas.parentElement!.addEventListener("mousemove", onMouse);
+    window.addEventListener("mousemove", onMouse);
 
     let raf: number;
     const start = performance.now();
@@ -157,8 +182,14 @@ export function Background() {
     return () => {
       cancelAnimationFrame(raf);
       window.removeEventListener("resize", resize);
+      window.removeEventListener("mousemove", onMouse);
     };
   }, []);
 
-  return <canvas ref={canvasRef} className="webgl-canvas" />;
+  return (
+    <canvas
+      ref={canvasRef}
+      className="hero-canvas"
+    />
+  );
 }

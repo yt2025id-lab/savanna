@@ -1,50 +1,80 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useCallback } from "react";
 import { useGSAP } from "@gsap/react";
-import { gsap, ScrollTrigger } from "@/lib/gsap";
+import { gsap } from "@/lib/gsap";
+import { LogoMark } from "./Icons";
 
 export function Footer() {
   const ctaRef = useRef<HTMLElement>(null);
+  const btnRef = useRef<HTMLAnchorElement>(null);
+
+  // gsap.quickTo for performant magnetic button
+  const magneticQuick = useRef<{ x: (v: number) => void; y: (v: number) => void } | null>(null);
+
+  const getMagnetic = useCallback(() => {
+    if (!btnRef.current) return null;
+    if (!magneticQuick.current) {
+      magneticQuick.current = {
+        x: gsap.quickTo(btnRef.current, "x", { duration: 0.3, ease: "power2.out" }),
+        y: gsap.quickTo(btnRef.current, "y", { duration: 0.3, ease: "power2.out" }),
+      };
+    }
+    return magneticQuick.current;
+  }, []);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!btnRef.current) return;
+    const rect = btnRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left - rect.width / 2;
+    const y = e.clientY - rect.top - rect.height / 2;
+    const m = getMagnetic();
+    if (m) {
+      m.x(x * 0.3);
+      m.y(y * 0.3);
+    }
+  }, [getMagnetic]);
+
+  const handleMouseLeave = useCallback(() => {
+    const m = getMagnetic();
+    if (m) {
+      gsap.to(btnRef.current, { x: 0, y: 0, duration: 0.6, ease: "elastic.out(1, 0.3)" });
+    }
+  }, [getMagnetic]);
 
   useGSAP(() => {
     if (!ctaRef.current) return;
-
-    const h2 = ctaRef.current.querySelector("h2");
-    const p = ctaRef.current.querySelector("p");
-    const btn = ctaRef.current.querySelector(".btn-cta");
-
-    if (h2) {
-      gsap.from(h2, {
-        scrollTrigger: { trigger: ctaRef.current, start: "top 80%" },
-        opacity: 0, y: 50, duration: 0.8,
-      });
-    }
-    if (p) {
-      gsap.from(p, {
-        scrollTrigger: { trigger: ctaRef.current, start: "top 75%" },
-        opacity: 0, y: 40, duration: 0.7, delay: 0.2,
-      });
-    }
-    if (btn) {
-      gsap.from(btn, {
-        scrollTrigger: { trigger: btn, start: "top 90%" },
-        opacity: 0, scale: 0.8, duration: 0.6, delay: 0.3,
-      });
-    }
+    gsap.from(ctaRef.current.querySelector("h2"), {
+      scrollTrigger: { trigger: ctaRef.current, start: "top 85%", toggleActions: "play none none none" },
+      opacity: 0, y: 50, duration: 0.8,
+    });
+    gsap.from(btnRef.current, {
+      scrollTrigger: { trigger: btnRef.current, start: "top 90%", toggleActions: "play none none none" },
+      opacity: 0, scale: 0.8, duration: 0.6, delay: 0.3,
+    });
   }, { scope: ctaRef });
 
   return (
     <>
       {/* CTA Section */}
-      <section ref={ctaRef} className="cta-section">
-        <h2>
-          Ready to Grow
-          <br />
-          Your <span style={{ color: "var(--primary)" }}>Yield</span>?
+      <section
+        ref={ctaRef}
+        className="cta-section"
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+      >
+        <h2 style={{ fontFamily: "Georgia, serif", fontSize: "clamp(2rem, 5vw, 3.5rem)", color: "#F5EDD6", position: "relative" }}>
+          Ready to Grow Your Yield?
         </h2>
-        <p>Join hundreds of depositors earning passive yield on Celo Network.</p>
-        <a href="http://localhost:3000/earn" className="btn-cta">
+        <p style={{ color: "#E8D5A3", fontSize: "1.1rem", marginBottom: "2.5rem", position: "relative", opacity: 0.85 }}>
+          Join thousands earning on Celo&apos;s most intelligent yield protocol
+        </p>
+        <a
+          ref={btnRef}
+          href={`${process.env.NEXT_PUBLIC_APP_URL || ""}/earn`}
+          className="btn-cta"
+          style={{ position: "relative", display: "inline-flex" }}
+        >
           Launch App Now →
         </a>
       </section>
@@ -53,7 +83,10 @@ export function Footer() {
       <footer className="footer">
         <div className="footer-inner">
           <div className="footer-brand">
-            <div className="footer-logo">🌿 Savanna Finance</div>
+            <div className="footer-logo">
+              <LogoMark size={20} />
+              <span>Savanna Finance</span>
+            </div>
             <p>Yield That Grows Naturally</p>
           </div>
           <div className="footer-links">

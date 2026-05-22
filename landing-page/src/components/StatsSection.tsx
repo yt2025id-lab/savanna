@@ -11,26 +11,20 @@ const stats = [
   { target: 12, decimals: 0, suffix: "+", label: "Supported Assets", prefix: "" },
 ];
 
+// Background ghost number for each stat
+const bgNumbers = ["$2.4M", "18.5%", "10K+", "12+"];
+
 export function StatsSection() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useGSAP(() => {
     if (!containerRef.current) return;
 
-    // Headers
-    const headers = containerRef.current.querySelectorAll(".section-label, .section-title, .section-sub");
-    headers.forEach((el) => {
-      gsap.from(el, {
-        scrollTrigger: { trigger: el, start: "top 88%", toggleActions: "play none none reverse" },
-        opacity: 0, y: 40, duration: 0.7,
-      });
-    });
-
     // Counter animation — trigger once
     let counted = false;
     ScrollTrigger.create({
       trigger: containerRef.current,
-      start: "top 75%",
+      start: "top 80%",
       once: true,
       onEnter: () => {
         if (counted) return;
@@ -46,9 +40,12 @@ export function StatsSection() {
             duration: 2,
             ease: "power2.out",
             onUpdate() {
-              const display = decimals > 0
-                ? obj.val.toFixed(decimals)
-                : Math.floor(obj.val).toLocaleString();
+              let display: string;
+              if (decimals > 0) {
+                display = obj.val.toFixed(decimals);
+              } else {
+                display = Math.floor(obj.val).toLocaleString();
+              }
               el.textContent = prefix + display;
             },
           });
@@ -56,12 +53,19 @@ export function StatsSection() {
       },
     });
 
-    // Items fade in
+    // Items entrance with stagger
     const items = containerRef.current.querySelectorAll(".stat-item");
     items.forEach((item, i) => {
       gsap.from(item, {
-        scrollTrigger: { trigger: item, start: "top 85%" },
-        opacity: 0, y: 40, duration: 0.6, delay: i * 0.12,
+        scrollTrigger: {
+          trigger: item,
+          start: "top 90%",
+          toggleActions: "play none none none",
+        },
+        opacity: 0,
+        y: 40,
+        duration: 0.6,
+        delay: i * 0.1,
       });
     });
   }, { scope: containerRef });
@@ -74,17 +78,24 @@ export function StatsSection() {
         background: "#111F13",
         borderTop: "1px solid rgba(200, 168, 75, 0.1)",
         borderBottom: "1px solid rgba(200, 168, 75, 0.1)",
+        position: "relative",
+        zIndex: 2,
       }}
     >
       <div ref={containerRef}>
         <div className="section-label">Protocol Stats</div>
-        <h2 className="section-title">
-          Growing <span style={{ color: "var(--primary)" }}>Every Day</span>
+        <h2
+          className="section-title"
+          style={{ fontFamily: "Georgia, serif" }}
+        >
+          Growing Every Day
         </h2>
         <p className="section-sub">Real numbers from a real protocol on Celo.</p>
         <div className="stats-grid">
-          {stats.map((s) => (
+          {stats.map((s, i) => (
             <div key={s.label} className="stat-item">
+              {/* Ghost background number */}
+              <div className="stat-bg-number">{bgNumbers[i]}</div>
               <div className="stat-value">
                 <span
                   className="counter"
