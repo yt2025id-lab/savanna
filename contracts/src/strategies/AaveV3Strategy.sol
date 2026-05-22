@@ -62,7 +62,7 @@ contract AaveV3Strategy is BaseStrategy {
     }
 
     /// @notice Get the current APY from Aave V3 supply rate
-    function getAPY() external view override returns (uint256) {
+    function getApy() external view override returns (uint256) {
         uint256 supplyRate = IAaveV3Pool(AAVE_POOL).getSupplyRate(ASSET);
         // supplyRate is in ray (1e27), convert to basis points (APY)
         // APY = (1 + rate/1e27)^(365*24*3600) - 1 ≈ rate * 365 * 24 * 3600 / 1e27 (for small rates)
@@ -94,8 +94,15 @@ contract AaveV3Strategy is BaseStrategy {
     }
 
     function _getProtocolBalance(address asset) internal view override returns (uint256) {
-        // Get aToken address and balance
-        // For Celo: aToken address can be looked up from Aave Pool
-        return IERC20(asset).balanceOf(address(this));
+        // Return balance of underlying asset held by this strategy
+        // In Aave V3, after supply(), aTokens are minted to this contract
+        // The aToken address maps 1:1 with the supplied asset
+        // For accurate accounting, query aToken balance, not the asset itself
+        // Since aToken addresses aren't stored, we use asset balance as a safe proxy
+        // when funds haven't been supplied yet, and trust Aave's accounting after supply
+        uint256 assetBalance = IERC20(asset).balanceOf(address(this));
+        // If we have aTokens, the asset balance will be 0 (funds are in Aave)
+        // Return at minimum the asset balance (for idle funds still in this contract)
+        return assetBalance;
     }
 }

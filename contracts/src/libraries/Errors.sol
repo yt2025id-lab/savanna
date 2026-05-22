@@ -33,6 +33,8 @@ library Errors {
 
     /// @notice Caller is not the authorized Chainlink forwarder
     error Savanna__OnlyForwarder();
+    /// @notice Caller is not the authorized vault
+    error Savanna__OnlyVault();
     /// @notice Invalid report data received from oracle
     error Savanna__InvalidReport();
     /// @notice Strategy not registered for the given protocol
@@ -52,8 +54,6 @@ library Errors {
     error Savanna__StrategyInsufficientFunds(uint256 requested, uint256 available);
     /// @notice Unsupported asset for this strategy
     error Savanna__UnsupportedAsset(address asset);
-    /// @notice Only vault can call this function
-    error Savanna__OnlyVault();
 
     // ============ Oracle / Feed Errors ============
 

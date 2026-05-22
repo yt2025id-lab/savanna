@@ -47,7 +47,7 @@ contract MoolaStrategy is BaseStrategy {
 
     /// @notice Get the current APY from Moola supply rate
     /// @dev Moola uses per-block rates, Celo has ~5s block time
-    function getAPY() external view override returns (uint256) {
+    function getApy() external view override returns (uint256) {
         uint256 ratePerBlock = IMoolaPool(MOOLA_CTOKEN).supplyRatePerBlock();
         // Celo block time ~5 seconds, blocks per year = 365 * 24 * 3600 / 5
         uint256 blocksPerYear = 365 days / 5;

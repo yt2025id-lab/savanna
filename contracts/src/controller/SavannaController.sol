@@ -71,15 +71,14 @@ contract SavannaController is ISavannaController, Ownable, Pausable, ReentrancyG
     // ============ Chainlink Oracle Receiver ============
 
     /// @notice Called by Chainlink Forwarder to deliver AI recommendation
-    /// @param metadata Chainlink metadata (workflow ID, DON ID, etc.)
     /// @param report ABI-encoded recommendation data:
-    ///         (address user, uint8 protocolId, uint256 allocationBps, uint256 expectedAPY, string reasoning)
-    function onReport(bytes calldata metadata, bytes calldata report) external onlyForwarder whenNotPaused {
+    ///         (address user, uint8 protocolId, uint256 allocationBps, uint256 expectedApy, string reasoning)
+    function onReport(bytes calldata, bytes calldata report) external onlyForwarder whenNotPaused {
         (
             address user,
             uint8 protocolId,
             uint256 allocationBps,
-            uint256 expectedAPY,
+            uint256 expectedApy,
             string memory reasoning
         ) = abi.decode(report, (address, uint8, uint256, uint256, string));
 
@@ -99,7 +98,7 @@ contract SavannaController is ISavannaController, Ownable, Pausable, ReentrancyG
 
         // ============ Execute ============
 
-        emit RecommendationReceived(user, protocol, allocationBps, expectedAPY, reasoning);
+        emit RecommendationReceived(user, protocol, allocationBps, expectedApy, reasoning);
 
         // Calculate allocation amount
         DataTypes.UserPosition memory pos = ISavannaVault(vault).getUserPosition(user);
@@ -136,6 +135,19 @@ contract SavannaController is ISavannaController, Ownable, Pausable, ReentrancyG
         emit UserWithdrawn(user, withdrawn);
     }
 
+    // ============ Rebalance ============
+
+    /// @notice Called by vault during Chainlink Automation rebalance cycle
+    /// @dev In production, the AI agent (Chainlink Functions) evaluates all active positions
+    ///      and determines if any should be reallocated to a better-yielding protocol.
+    ///      This is a placeholder that the AI agent workflow will call.
+    function rebalance() external view {
+        if (msg.sender != vault) revert Errors.Savanna__OnlyVault();
+        // Rebalance logic is handled by AI agent via Chainlink Functions
+        // The vault calls this to signal a rebalance cycle is due
+        // In production: iterate positions, compare APYs, trigger re-allocation
+    }
+
     // ============ View Functions ============
 
     /// @notice Get the strategy address for a protocol
@@ -159,7 +171,11 @@ contract SavannaController is ISavannaController, Ownable, Pausable, ReentrancyG
     // ============ Modifiers ============
 
     modifier onlyForwarder() {
-        if (msg.sender != forwarder) revert Errors.Savanna__OnlyForwarder();
+        _onlyForwarder();
         _;
+    }
+
+    function _onlyForwarder() internal view {
+        if (msg.sender != forwarder) revert Errors.Savanna__OnlyForwarder();
     }
 }

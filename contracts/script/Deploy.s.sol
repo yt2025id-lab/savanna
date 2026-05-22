@@ -7,12 +7,11 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {MockERC20} from "../src/mocks/MockERC20.sol";
 import {MockPriceFeed} from "../src/mocks/MockPriceFeed.sol";
 import {SavannaVault} from "../src/vault/SavannaVault.sol";
+import {SavannaOracle} from "../src/SavannaOracle.sol";
 import {SavannaController} from "../src/controller/SavannaController.sol";
 import {SavannaFeedConsumer} from "../src/feeds/SavannaFeedConsumer.sol";
 import {SavannaCrossChainReceiver} from "../src/crosschain/SavannaCrossChainReceiver.sol";
 import {AaveV3Strategy} from "../src/strategies/AaveV3Strategy.sol";
-import {MoolaStrategy} from "../src/strategies/MoolaStrategy.sol";
-import {CompoundV3Strategy} from "../src/strategies/CompoundV3Strategy.sol";
 import {ReserveStrategy} from "../src/strategies/ReserveStrategy.sol";
 import {DataTypes} from "../src/libraries/DataTypes.sol";
 
@@ -41,6 +40,7 @@ contract Deploy is Script {
     struct Deployed {
         address asset; // USDC (mainnet) or MockUSDC (testnet)
         address vault;
+        address oracle;
         address controller;
         address feedConsumer;
         address crossChainReceiver;
@@ -83,43 +83,59 @@ contract Deploy is Script {
             console2.log("1. MockUSDC deployed:", asset);
         }
 
-        // ============ 2. Deploy Vault ============
+        // ============ 2. Deploy Oracle ============
 
-        SavannaVault vault = new SavannaVault(IERC20(asset), deployer);
+        SavannaOracle oracleContract = new SavannaOracle(deployer);
+        deployed.oracle = address(oracleContract);
+        console2.log("2. SavannaOracle:", deployed.oracle);
+
+        // Register USDC asset feed in oracle (mainnet uses real Chainlink feed)
+        if (isMainnet) {
+            oracleContract.setAssetFeed(asset, oracleContract.USDC_USD_FEED());
+        } else {
+            // Deploy mock price feed for testnet ($1.00 USDC)
+            MockPriceFeed mockOracleFeed = new MockPriceFeed(int256(1e8), 8);
+            oracleContract.setAssetFeed(asset, address(mockOracleFeed));
+        }
+        console2.log("=> Oracle asset feed registered for:", asset);
+
+        // ============ 3. Deploy Vault ============
+
+        SavannaVault vault = new SavannaVault(IERC20(asset), deployer, address(oracleContract));
         deployed.vault = address(vault);
-        console2.log("2. SavannaVault:", deployed.vault);
+        console2.log("3. SavannaVault:", deployed.vault);
 
-        // ============ 3. Deploy Feed Consumer ============
+        // ============ 4. Deploy Feed Consumer ============
 
         SavannaFeedConsumer feedConsumer = new SavannaFeedConsumer(deployer);
         deployed.feedConsumer = address(feedConsumer);
-        console2.log("3. SavannaFeedConsumer:", deployed.feedConsumer);
+        console2.log("4. SavannaFeedConsumer:", deployed.feedConsumer);
 
-        // ============ 4. Deploy Strategies ============
+        // ============ 5. Deploy Strategies ============
 
         address aavePool = isMainnet ? MAINNET_AAVE_POOL : SEPOLIA_AAVE_POOL;
 
         AaveV3Strategy aaveStrategy =
             new AaveV3Strategy(asset, deployed.vault, deployer, aavePool);
         deployed.aaveStrategy = address(aaveStrategy);
-        console2.log("4. AaveV3Strategy:", deployed.aaveStrategy);
+        console2.log("5. AaveV3Strategy:", deployed.aaveStrategy);
 
         // Moola, Compound not available on Celo per celopedia-skills review
         // Using ReserveStrategy as fallback alongside Aave
         ReserveStrategy reserveStrategy = new ReserveStrategy(asset, deployed.vault, deployer);
         deployed.reserveStrategy = address(reserveStrategy);
-        console2.log("5. ReserveStrategy:", deployed.reserveStrategy);
+        console2.log("6. ReserveStrategy:", deployed.reserveStrategy);
 
-        // ============ 5. Deploy Controller ============
+        // ============ 6. Deploy Controller ============
 
         // On mainnet, replace with real Chainlink Functions forwarder
         address forwarder = deployer; // TODO: set real Chainlink forwarder before mainnet
         SavannaController controller =
             new SavannaController(deployed.vault, forwarder, deployer);
         deployed.controller = address(controller);
-        console2.log("6. SavannaController:", deployed.controller);
+        console2.log("7. SavannaController:", deployed.controller);
 
-        // ============ 6. Wire Up ============
+        // ============ 7. Wire Up ============
 
         // Set controller on vault
         vault.setController(deployed.controller);
@@ -141,14 +157,14 @@ contract Deploy is Script {
         controller.setPriceFeed(asset, address(mockFeed));
         console2.log("=> Price feeds registered");
 
-        // ============ 7. Deploy Cross-Chain Receiver ============
+        // ============ 8. Deploy Cross-Chain Receiver ============
 
         SavannaCrossChainReceiver crossChainReceiver =
             new SavannaCrossChainReceiver(deployed.vault, deployer);
         deployed.crossChainReceiver = address(crossChainReceiver);
-        console2.log("7. SavannaCrossChainReceiver:", deployed.crossChainReceiver);
+        console2.log("9. SavannaCrossChainReceiver:", deployed.crossChainReceiver);
 
-        // ============ 8. Wire Cross-Chain ============
+        // ============ 9. Wire Cross-Chain ============
 
         // Set cross-chain receiver on vault
         vault.setCrossChainReceiver(deployed.crossChainReceiver);
@@ -173,6 +189,7 @@ contract Deploy is Script {
         console2.log("=== Deployment Complete ===");
         console2.log("Network:", isMainnet ? "Celo Mainnet" : "Celo Sepolia");
         console2.log("Asset:", asset);
+        console2.log("Oracle:", deployed.oracle);
         console2.log("Vault:", deployed.vault);
         console2.log("Controller:", deployed.controller);
         console2.log("FeedConsumer:", deployed.feedConsumer);

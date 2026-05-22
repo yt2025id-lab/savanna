@@ -49,15 +49,15 @@ export function YieldHistory() {
     ` L ${points[points.length - 1].x} ${PY + CH} L ${points[0].x} ${PY + CH} Z`;
 
   return (
-    <div className="rounded-2xl border border-[rgba(200,168,75,0.1)] bg-[#1A2E1C] overflow-hidden">
+    <div className="rounded-2xl border border-border bg-card overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-[rgba(200,168,75,0.08)]">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-border">
         <div className="flex items-center gap-2">
-          <BarChart3 className="h-5 w-5 text-[#C8A84B]" />
-          <h2 className="text-base font-semibold text-[#F5EDD6]">Yield History</h2>
+          <BarChart3 className="h-5 w-5 text-accent" />
+          <h2 className="text-base font-semibold text-foreground">Yield History</h2>
         </div>
         {/* Filter buttons */}
-        <div className="flex gap-1 rounded-lg bg-[#0D1A0F] p-0.5">
+        <div className="flex gap-1 rounded-lg bg-background p-0.5">
           {filters.map((f) => (
             <button
               key={f}
@@ -65,8 +65,8 @@ export function YieldHistory() {
               className={clsx(
                 "px-3 py-1 text-[11px] font-medium rounded-md transition-all cursor-pointer",
                 filter === f
-                  ? "bg-[rgba(200,168,75,0.15)] text-[#C8A84B]"
-                  : "text-[#E8D5A3] opacity-50 hover:opacity-80"
+                  ? "bg-accent-dim text-accent"
+                  : "text-muted hover:text-muted-light"
               )}
             >
               {f}
@@ -85,8 +85,8 @@ export function YieldHistory() {
           >
             <defs>
               <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#C8A84B" stopOpacity="0.25" />
-                <stop offset="100%" stopColor="#C8A84B" stopOpacity="0" />
+                <stop offset="0%" stopColor="#22c55e" stopOpacity="0.25" />
+                <stop offset="100%" stopColor="#22c55e" stopOpacity="0" />
               </linearGradient>
             </defs>
 
@@ -96,8 +96,8 @@ export function YieldHistory() {
               const val = (frac * maxVal).toFixed(0);
               return (
                 <g key={frac}>
-                  <line x1={PX} y1={y} x2={PX + CW} y2={y} stroke="rgba(200,168,75,0.06)" />
-                  <text x={PX - 6} y={y + 3} textAnchor="end" fill="#E8D5A3" opacity="0.35" fontSize="9">
+                  <line x1={PX} y1={y} x2={PX + CW} y2={y} stroke="rgba(34,197,94,0.08)" />
+                  <text x={PX - 6} y={y + 3} textAnchor="end" fill="#a1a1aa" opacity="0.5" fontSize="9">
                     ${val}
                   </text>
                 </g>
@@ -108,11 +108,11 @@ export function YieldHistory() {
             <path d={areaPath} fill="url(#areaGrad)" />
 
             {/* Line */}
-            <path d={linePath} fill="none" stroke="#C8A84B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d={linePath} fill="none" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
 
             {/* Dots */}
             {points.map((p, i) => (
-              <circle key={i} cx={p.x} cy={p.y} r="3" fill="#C8A84B" stroke="#1A2E1C" strokeWidth="2" />
+              <circle key={i} cx={p.x} cy={p.y} r="3" fill="#22c55e" stroke="#131316" strokeWidth="2" />
             ))}
 
             {/* Last value label */}
@@ -120,7 +120,7 @@ export function YieldHistory() {
               <text
                 x={points[points.length - 1].x + 6}
                 y={points[points.length - 1].y + 3}
-                fill="#C8A84B"
+                fill="#22c55e"
                 fontSize="10"
                 fontWeight="600"
               >
@@ -131,9 +131,9 @@ export function YieldHistory() {
         </div>
 
         {/* Summary */}
-        <div className="flex items-center justify-between mt-3 pt-3 border-t border-[rgba(200,168,75,0.06)]">
-          <span className="text-[11px] text-[#E8D5A3] opacity-40">Cumulative earnings</span>
-          <span className="text-sm font-bold text-[#4A7C59]">
+        <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
+          <span className="text-[11px] text-muted">Cumulative earnings</span>
+          <span className="text-sm font-bold text-accent">
             +${data[data.length - 1]?.value ?? "0.00"}
           </span>
         </div>

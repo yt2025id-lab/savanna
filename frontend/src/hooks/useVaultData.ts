@@ -2,7 +2,7 @@
 
 import { useAccount, useReadContract } from "wagmi";
 import { formatUnits } from "viem";
-import { SAVANNA_VAULT_ABI, SAVANNA_CONTROLLER_ABI, ERC20_ABI } from "@/config/abis";
+import { SAVANNA_VAULT_ABI, SAVANNA_CONTROLLER_ABI, SAVANNA_ORACLE_ABI, ERC20_ABI } from "@/config/abis";
 import { getContracts } from "@/config/contracts";
 
 export function useVaultData() {
@@ -38,6 +38,41 @@ export function useVaultData() {
     functionName: "totalPositions",
   });
 
+  // Read total yield earned
+  const { data: totalYieldEarned } = useReadContract({
+    address: contracts.vault,
+    abi: SAVANNA_VAULT_ABI,
+    functionName: "totalYieldEarned",
+  });
+
+  // Read rebalance interval
+  const { data: rebalanceInterval } = useReadContract({
+    address: contracts.vault,
+    abi: SAVANNA_VAULT_ABI,
+    functionName: "rebalanceInterval",
+  });
+
+  // Read last rebalance timestamp
+  const { data: lastRebalance } = useReadContract({
+    address: contracts.vault,
+    abi: SAVANNA_VAULT_ABI,
+    functionName: "lastRebalance",
+  });
+
+  // Read USD price of asset from oracle
+  const { data: assetPriceUsd } = useReadContract({
+    address: contracts.vault,
+    abi: SAVANNA_VAULT_ABI,
+    functionName: "getAssetPriceUsd",
+  });
+
+  // Read total deployed value in USD
+  const { data: totalDeployedValueUsd } = useReadContract({
+    address: contracts.vault,
+    abi: SAVANNA_VAULT_ABI,
+    functionName: "getTotalDeployedValueUsd",
+  });
+
   // Read user balance (shares)
   const { data: userShares, isLoading: loadingUserShares } = useReadContract({
     address: contracts.vault,
@@ -68,6 +103,14 @@ export function useVaultData() {
     abi: SAVANNA_VAULT_ABI,
     functionName: "convertToAssets",
     args: userShares ? [userShares] : undefined,
+  });
+
+  // Read user position value in USD
+  const { data: userPositionValueUsd } = useReadContract({
+    address: contracts.vault,
+    abi: SAVANNA_VAULT_ABI,
+    functionName: "getUserPositionValueUsd",
+    args: address ? [address] : undefined,
   });
 
   // Read token balance
@@ -107,6 +150,15 @@ export function useVaultData() {
     functionName: "totalRecommendations",
   });
 
+  // Read oracle asset price (for StatsBar APY calculation)
+  const { data: oracleAssetPrice } = useReadContract({
+    address: contracts.oracle as `0x${string}`,
+    abi: SAVANNA_ORACLE_ABI,
+    functionName: "getAssetPrice",
+    args: [contracts.usdc],
+    query: { enabled: !!contracts.oracle },
+  });
+
   const dec = (tokenDecimals as number) ?? 6;
 
   // Format helpers
@@ -117,27 +169,48 @@ export function useVaultData() {
     });
   };
 
+  // Format 18-decimal USD values
+  const formatUsd = (val: unknown) => {
+    if (!val || typeof val !== "bigint") return "0";
+    return Number(formatUnits(val, 18)).toLocaleString(undefined, {
+      maximumFractionDigits: 2,
+    });
+  };
+
   return {
     // Raw data
     totalAssets: totalAssets as bigint | undefined,
     totalSupply: totalSupply as bigint | undefined,
     totalDeployed: totalDeployed as bigint | undefined,
     totalPositions: totalPositions as bigint | undefined,
+    totalYieldEarned: totalYieldEarned as bigint | undefined,
+    rebalanceInterval: rebalanceInterval as bigint | undefined,
+    lastRebalance: lastRebalance as bigint | undefined,
+    assetPriceUsd: assetPriceUsd as bigint | undefined,
+    totalDeployedValueUsd: totalDeployedValueUsd as bigint | undefined,
     userShares: userShares as bigint | undefined,
     sharesInAssets: sharesInAssets as bigint | undefined,
     userPosition: userPosition as any | undefined,
+    userPositionValueUsd: userPositionValueUsd as bigint | undefined,
     hasActiveRequest: hasActiveRequest as boolean | undefined,
     tokenBalance: tokenBalance as bigint | undefined,
     tokenDecimals: dec,
     tokenSymbol: (tokenSymbol as string) ?? "USDC",
     allowance: allowance as bigint | undefined,
     totalRecommendations: totalRecommendations as bigint | undefined,
+    oracleAssetPrice: oracleAssetPrice as bigint | undefined,
 
-    // Formatted
+    // Formatted (asset decimals)
     tvlFormatted: formatBalance(totalAssets),
     deployedFormatted: formatBalance(totalDeployed),
+    yieldEarnedFormatted: formatBalance(totalYieldEarned),
     userVaultBalanceFormatted: formatBalance(sharesInAssets),
     userTokenBalanceFormatted: formatBalance(tokenBalance),
+
+    // Formatted (USD 18-decimals)
+    deployedUsdFormatted: formatUsd(totalDeployedValueUsd),
+    positionUsdFormatted: formatUsd(userPositionValueUsd),
+    assetPriceFormatted: formatUsd(assetPriceUsd),
 
     // Loading
     isLoading:

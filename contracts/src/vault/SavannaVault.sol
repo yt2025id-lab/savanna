@@ -10,7 +10,9 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 import {ISavannaVault} from "../interfaces/ISavannaVault.sol";
+import {ISavannaController} from "../interfaces/ISavannaController.sol";
 import {IStrategy} from "../strategies/IStrategy.sol";
+import {SavannaOracle} from "../SavannaOracle.sol";
 import {DataTypes} from "../libraries/DataTypes.sol";
 import {Errors} from "../libraries/Errors.sol";
 import {Constants} from "../libraries/Constants.sol";
@@ -18,7 +20,8 @@ import {Constants} from "../libraries/Constants.sol";
 /// @title SavannaVault
 /// @notice ERC-4626 vault for user deposits with AI-powered yield optimization on Celo
 /// @dev Users deposit stablecoins (cUSD/USDC), request a strategy with time horizon,
-///      and the Chainlink oracle analyzes protocols and executes the optimal strategy
+///      and the Chainlink oracle analyzes protocols and executes the optimal strategy.
+///      Integrates Chainlink Data Feeds for pricing and Automation for rebalancing.
 contract SavannaVault is ERC4626, Ownable, ISavannaVault, ReentrancyGuard, Pausable {
     using SafeERC20 for IERC20;
 
@@ -28,6 +31,8 @@ contract SavannaVault is ERC4626, Ownable, ISavannaVault, ReentrancyGuard, Pausa
     address public controller;
     /// @notice Cross-chain receiver contract address (LI.FI bridge receiver)
     address public crossChainReceiver;
+    /// @notice SavannaOracle instance for Chainlink price feeds
+    SavannaOracle public oracle;
     /// @notice User address => active strategy request flag
     mapping(address => bool) private _activeRequests;
     /// @notice User address => position data
@@ -40,14 +45,36 @@ contract SavannaVault is ERC4626, Ownable, ISavannaVault, ReentrancyGuard, Pausa
     uint256 public override totalDeployed;
     /// @notice Total number of active positions
     uint256 public totalPositions;
+    /// @notice Cumulative yield earned across all completed strategies (in asset units)
+    uint256 public totalYieldEarned;
+
+    // ============ Automation State ============
+
+    /// @notice Timestamp of last rebalance (initialized in constructor)
+    uint256 public lastRebalance;
+    /// @notice Minimum interval between automatic rebalances (default 4 hours)
+    uint256 public rebalanceInterval = 4 hours;
+    /// @notice Number of users processed in last rebalance
+    uint256 public lastRebalanceCount;
+
+    // ============ Events ============
+
+    event RebalanceTriggered(uint256 indexed timestamp, uint256 positionsProcessed);
+    event RebalanceIntervalUpdated(uint256 oldInterval, uint256 newInterval);
+    event OracleUpdated(address indexed oldOracle, address indexed newOracle);
+    event YieldEarned(address indexed user, int256 yieldAmount, uint256 returnedAmount, uint256 allocatedAmount);
 
     // ============ Constructor ============
 
-    constructor(IERC20 asset_, address owner_)
+    constructor(IERC20 asset_, address owner_, address oracle_)
         ERC4626(asset_)
         ERC20("Savanna Yield Token", "svYLD")
         Ownable(owner_)
-    {}
+    {
+        if (oracle_ == address(0)) revert Errors.Savanna__ZeroAddress();
+        oracle = SavannaOracle(oracle_);
+        lastRebalance = block.timestamp;
+    }
 
     // ============ Admin ============
 
@@ -73,6 +100,24 @@ contract SavannaVault is ERC4626, Ownable, ISavannaVault, ReentrancyGuard, Pausa
     /// @notice Unpause vault operations
     function unpause() external onlyOwner {
         _unpause();
+    }
+
+    /// @notice Update the oracle contract address
+    /// @param oracle_ New SavannaOracle address
+    function setOracle(address oracle_) external onlyOwner {
+        if (oracle_ == address(0)) revert Errors.Savanna__ZeroAddress();
+        address oldOracle = address(oracle);
+        oracle = SavannaOracle(oracle_);
+        emit OracleUpdated(oldOracle, oracle_);
+    }
+
+    /// @notice Update the rebalance interval for Chainlink Automation
+    /// @param interval New interval in seconds (minimum 1 hour)
+    function setRebalanceInterval(uint256 interval) external onlyOwner {
+        if (interval < 1 hours) revert Errors.Savanna__InvalidParameter("interval too short");
+        uint256 oldInterval = rebalanceInterval;
+        rebalanceInterval = interval;
+        emit RebalanceIntervalUpdated(oldInterval, interval);
     }
 
     // ============ ERC-4626 Overrides ============
@@ -227,6 +272,12 @@ contract SavannaVault is ERC4626, Ownable, ISavannaVault, ReentrancyGuard, Pausa
         if (paused()) revert Errors.Savanna__VaultPaused();
         if (!_activeRequests[user]) revert Errors.Savanna__NoActiveRequest();
 
+        // Validate amount does not exceed user's actual balance
+        uint256 userBalance = convertToAssets(balanceOf(user));
+        if (amount > userBalance) {
+            revert Errors.Savanna__InsufficientBalance(amount, userBalance);
+        }
+
         DataTypes.UserPosition storage pos = _positions[user];
         pos.activeStrategy = strategy;
         pos.allocatedAmount = amount;
@@ -250,7 +301,27 @@ contract SavannaVault is ERC4626, Ownable, ISavannaVault, ReentrancyGuard, Pausa
         DataTypes.UserPosition storage pos = _positions[user];
         if (!pos.isActive) revert Errors.Savanna__NoActivePosition();
 
-        totalDeployed -= pos.allocatedAmount;
+        uint256 allocated = pos.allocatedAmount;
+        totalDeployed -= allocated;
+
+        // Track yield (positive or negative)
+        // returnedAmount comes from controller after strategy.withdraw() is called
+        // The actual tokens are already in the vault (controller calls strategy.withdraw(vault))
+        if (returnedAmount > allocated) {
+            uint256 yieldEarned = returnedAmount - allocated;
+            totalYieldEarned += yieldEarned;
+            // forge-lint: disable-next-line(unsafe-typecast)
+            emit YieldEarned(user, int256(yieldEarned), returnedAmount, allocated);
+        } else if (returnedAmount < allocated) {
+            uint256 loss = allocated - returnedAmount;
+            // Loss reduces totalYieldEarned (can go negative in accounting, but uint can't)
+            // We emit the event for off-chain tracking
+            // forge-lint: disable-next-line(unsafe-typecast)
+            emit YieldEarned(user, -int256(loss), returnedAmount, allocated);
+        } else {
+            emit YieldEarned(user, 0, returnedAmount, allocated);
+        }
+
         pos.isActive = false;
         pos.activeStrategy = address(0);
         pos.allocatedAmount = 0;
@@ -268,12 +339,22 @@ contract SavannaVault is ERC4626, Ownable, ISavannaVault, ReentrancyGuard, Pausa
         if (!pos.isActive) revert Errors.Savanna__NoActivePosition();
         if (pos.activeStrategy == address(0)) revert Errors.Savanna__NoActivePosition();
 
+        uint256 allocated = pos.allocatedAmount;
+
         // Withdraw from strategy
         address underlyingAsset = asset();
         uint256 withdrawn =
-            IStrategy(pos.activeStrategy).withdraw(underlyingAsset, pos.allocatedAmount, address(this));
+            IStrategy(pos.activeStrategy).withdraw(underlyingAsset, allocated, address(this));
 
-        totalDeployed -= pos.allocatedAmount;
+        totalDeployed -= allocated;
+
+        // Track yield/loss
+        if (withdrawn > allocated) {
+            totalYieldEarned += (withdrawn - allocated);
+        }
+        // forge-lint: disable-next-line(unsafe-typecast)
+        emit YieldEarned(user, int256(withdrawn) - int256(allocated), withdrawn, allocated);
+
         pos.isActive = false;
         pos.activeStrategy = address(0);
         pos.allocatedAmount = 0;
@@ -316,10 +397,92 @@ contract SavannaVault is ERC4626, Ownable, ISavannaVault, ReentrancyGuard, Pausa
         return type(uint256).max;
     }
 
+    // ============ Chainlink Automation ============
+
+    /// @notice Check if rebalance upkeep is needed
+    /// @dev Called by Chainlink Automation to determine if performUpkeep should run
+    /// @return upkeepNeeded True if rebalance interval has elapsed
+    /// @return performData Encoded data for performUpkeep (empty for simple time-based)
+    function checkUpkeep(bytes calldata)
+        external
+        view
+        returns (bool upkeepNeeded, bytes memory performData)
+    {
+        upkeepNeeded = (block.timestamp - lastRebalance) > rebalanceInterval && totalPositions > 0;
+        performData = "";
+    }
+
+    /// @notice Execute rebalance — triggered by Chainlink Automation
+    /// @dev Re-validates the condition since anyone can call this
+    /// @param performData Encoded data from checkUpkeep (unused for time-based)
+    function performUpkeep(bytes calldata performData) external nonReentrant {
+        require(
+            (block.timestamp - lastRebalance) > rebalanceInterval,
+            "Too early for rebalance"
+        );
+        require(totalPositions > 0, "No active positions");
+
+        lastRebalance = block.timestamp;
+        _rebalance(performData);
+
+        emit RebalanceTriggered(block.timestamp, lastRebalanceCount);
+    }
+
+    // ============ Oracle View Functions ============
+
+    /// @notice Get the current USD price of the vault's underlying asset
+    /// @return price USD price normalized to 18 decimals
+    function getAssetPriceUsd() external view returns (uint256) {
+        return oracle.getAssetPrice(asset());
+    }
+
+    /// @notice Calculate USD value of a user's position
+    /// @param user Address of the user
+    /// @return value USD value normalized to 18 decimals
+    function getUserPositionValueUsd(address user) external view returns (uint256) {
+        DataTypes.UserPosition memory pos = _positions[user];
+        if (!pos.isActive) return 0;
+
+        uint256 price = oracle.getAssetPrice(asset());
+        return (pos.allocatedAmount * price) / 1e18;
+    }
+
+    /// @notice Calculate total USD value of all deployed funds
+    /// @return value Total deployed value in USD (18 decimals)
+    function getTotalDeployedValueUsd() external view returns (uint256) {
+        if (totalDeployed == 0) return 0;
+        uint256 price = oracle.getAssetPrice(asset());
+        return (totalDeployed * price) / 1e18;
+    }
+
+    // ============ Internal ============
+
+    /// @dev Internal rebalance logic — signals controller to re-evaluate strategies
+    ///      Controller (AI agent) decides which positions need rebalancing
+    function _rebalance(bytes memory) internal {
+        if (controller == address(0)) {
+            lastRebalanceCount = 0;
+            return;
+        }
+
+        // Signal controller that a rebalance cycle is due
+        // Controller evaluates all active positions and triggers re-allocation if needed
+        try ISavannaController(controller).rebalance() {
+            lastRebalanceCount = totalPositions;
+        } catch {
+            // If controller rebalance fails, don't block future upkeep
+            lastRebalanceCount = 0;
+        }
+    }
+
     // ============ Modifiers ============
 
     modifier onlyController() {
-        if (msg.sender != controller) revert Errors.Savanna__OnlyController();
+        _onlyController();
         _;
+    }
+
+    function _onlyController() internal view {
+        if (msg.sender != controller) revert Errors.Savanna__OnlyController();
     }
 }

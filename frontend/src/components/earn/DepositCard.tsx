@@ -133,17 +133,17 @@ export function DepositCard() {
   const isBusy = step === "approving" || step === "depositing" || approvePending || depositPending || approveConfirming || depositConfirming;
 
   return (
-    <div className="rounded-2xl border border-[rgba(200,168,75,0.1)] bg-[#1A2E1C] overflow-hidden">
+    <div className="rounded-2xl border border-border bg-card overflow-hidden">
       {/* Header */}
-      <div className="flex items-center gap-2 px-5 py-4 border-b border-[rgba(200,168,75,0.08)]">
-        <ArrowDownToLine className="h-5 w-5 text-[#C8A84B]" />
-        <h2 className="text-base font-semibold text-[#F5EDD6]">Deposit</h2>
+      <div className="flex items-center gap-2 px-5 py-4 border-b border-border">
+        <ArrowDownToLine className="h-5 w-5 text-accent" />
+        <h2 className="text-base font-semibold text-foreground">Deposit</h2>
       </div>
 
       <div className="p-5 space-y-4">
         {/* Asset selector */}
         <div>
-          <label className="text-xs text-[#E8D5A3] opacity-60 mb-1.5 block">Select Asset</label>
+          <label className="text-xs text-muted mb-1.5 block">Select Asset</label>
           <div className="flex gap-2">
             {ASSETS.map((a) => (
               <button
@@ -152,8 +152,8 @@ export function DepositCard() {
                 className={clsx(
                   "flex-1 py-2 rounded-lg text-sm font-medium transition-all border",
                   selectedAsset === a.symbol
-                    ? "bg-[rgba(200,168,75,0.15)] border-[#C8A84B] text-[#C8A84B]"
-                    : "bg-transparent border-[rgba(200,168,75,0.1)] text-[#E8D5A3] opacity-60 hover:opacity-100"
+                    ? "bg-accent-dim border-accent/30 text-accent"
+                    : "bg-transparent border-border text-muted-light hover:text-foreground"
                 )}
               >
                 {a.symbol}
@@ -165,10 +165,10 @@ export function DepositCard() {
         {/* Amount input */}
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <label className="text-xs text-[#E8D5A3] opacity-60">Amount</label>
+            <label className="text-xs text-muted">Amount</label>
             <button
               onClick={handleSetMax}
-              className="text-xs text-[#C8A84B] hover:underline cursor-pointer"
+              className="text-xs text-accent hover:underline cursor-pointer"
             >
               Max: {userTokenBalanceFormatted ?? "0"}
             </button>
@@ -179,26 +179,26 @@ export function DepositCard() {
               placeholder="0.00"
               value={amount}
               onChange={(e) => { setAmount(e.target.value); setStep("idle"); setErrorMsg(""); }}
-              className="w-full bg-[#0D1A0F] border border-[rgba(200,168,75,0.15)] rounded-xl px-4 py-3 pr-16 text-lg text-[#F5EDD6] placeholder-[#E8D5A3]/30 focus:outline-none focus:border-[#C8A84B]/40 transition-colors"
+              className="w-full bg-background border border-border rounded-xl px-4 py-3 pr-16 text-lg text-foreground placeholder-muted/50 focus:outline-none focus:border-accent/40 transition-colors"
               disabled={isBusy}
             />
-            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-[#C8A84B]">
+            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-accent">
               {selectedAsset}
             </span>
           </div>
         </div>
 
         {/* APY preview */}
-        <div className="flex items-center justify-between rounded-lg bg-[rgba(74,124,89,0.12)] px-4 py-2.5">
-          <span className="text-xs text-[#E8D5A3] opacity-70">Estimated APY</span>
-          <span className="text-sm font-bold text-[#4A7C59]">{asset.apy}%</span>
+        <div className="flex items-center justify-between rounded-lg bg-accent-dim px-4 py-2.5">
+          <span className="text-xs text-muted-light">Estimated APY</span>
+          <span className="text-sm font-bold text-accent">{asset.apy}%</span>
         </div>
 
         {/* Estimated return */}
         {amount && !isNaN(Number(amount)) && Number(amount) > 0 && (
-          <div className="flex items-center justify-between text-xs text-[#E8D5A3] opacity-60">
+          <div className="flex items-center justify-between text-xs text-muted">
             <span>Estimated yearly return</span>
-            <span className="text-[#C8A84B] font-medium">
+            <span className="text-accent font-medium">
               ${(Number(amount) * Number(asset.apy) / 100).toFixed(2)}
             </span>
           </div>
@@ -207,7 +207,7 @@ export function DepositCard() {
         {/* Action buttons */}
         <div className="space-y-2">
           {!address ? (
-            <div className="text-center py-3 text-sm text-[#E8D5A3] opacity-50">
+            <div className="text-center py-3 text-sm text-muted">
               Connect wallet to deposit
             </div>
           ) : needsApproval ? (
@@ -217,8 +217,8 @@ export function DepositCard() {
               className={clsx(
                 "w-full py-3.5 rounded-xl font-semibold text-sm transition-all cursor-pointer",
                 isBusy
-                  ? "bg-[#C8A84B]/30 text-[#0D1A0F]/50 cursor-wait"
-                  : "bg-[#C8A84B] text-[#0D1A0F] hover:bg-[#d4b85a] hover:shadow-[0_0_30px_rgba(200,168,75,0.3)]"
+                  ? "bg-accent/30 text-white/50 cursor-wait"
+                  : "bg-accent text-white hover:bg-accent-hover hover:shadow-lg hover:shadow-accent/20"
               )}
             >
               {approvePending || approveConfirming ? (
@@ -237,8 +237,8 @@ export function DepositCard() {
               className={clsx(
                 "w-full py-3.5 rounded-xl font-semibold text-sm transition-all cursor-pointer",
                 isBusy || !parsedAmount
-                  ? "bg-[#C8A84B]/30 text-[#0D1A0F]/50 cursor-wait"
-                  : "bg-[#C8A84B] text-[#0D1A0F] hover:bg-[#d4b85a] hover:shadow-[0_0_30px_rgba(200,168,75,0.3)]"
+                  ? "bg-accent/30 text-white/50 cursor-wait"
+                  : "bg-accent text-white hover:bg-accent-hover hover:shadow-lg hover:shadow-accent/20"
               )}
             >
               {depositPending || depositConfirming ? (
@@ -260,20 +260,20 @@ export function DepositCard() {
 
         {/* Error */}
         {errorMsg && (
-          <div className="flex items-start gap-2 rounded-lg bg-red-900/20 border border-red-800/30 px-3 py-2">
-            <AlertCircle className="h-4 w-4 text-red-400 mt-0.5 shrink-0" />
-            <p className="text-xs text-red-300">{errorMsg}</p>
+          <div className="flex items-start gap-2 rounded-lg bg-danger-dim border border-danger/30 px-3 py-2">
+            <AlertCircle className="h-4 w-4 text-danger mt-0.5 shrink-0" />
+            <p className="text-xs text-danger">{errorMsg}</p>
           </div>
         )}
       </div>
 
       {/* LI.FI Placeholder */}
-      <div className="border-t border-[rgba(200,168,75,0.08)] px-5 py-4">
-        <div className="flex items-center justify-center gap-2 rounded-xl bg-[rgba(74,124,89,0.08)] border border-dashed border-[rgba(74,124,89,0.2)] py-5">
+      <div className="border-t border-border px-5 py-4">
+        <div className="flex items-center justify-center gap-2 rounded-xl bg-accent-dim/50 border border-dashed border-accent/20 py-5">
           <span className="text-lg">🌉</span>
           <div className="text-center">
-            <p className="text-sm text-[#E8D5A3] opacity-60">Cross-chain deposit coming soon</p>
-            <p className="text-[10px] text-[#E8D5A3] opacity-30 mt-0.5">via LI.FI integration</p>
+            <p className="text-sm text-muted-light">Cross-chain deposit coming soon</p>
+            <p className="text-[10px] text-muted mt-0.5">via LI.FI integration</p>
           </div>
         </div>
       </div>

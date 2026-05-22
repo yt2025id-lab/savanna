@@ -6,7 +6,6 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 import {DataTypes} from "../libraries/DataTypes.sol";
 import {Errors} from "../libraries/Errors.sol";
-import {Constants} from "../libraries/Constants.sol";
 
 /// @title SavannaFeedConsumer
 /// @notice Consumes Chainlink Data Feeds for price validation on Celo
@@ -100,6 +99,7 @@ contract SavannaFeedConsumer is Ownable {
 
         data = DataTypes.FeedData({
             feed: feedAddr,
+            // forge-lint: disable-next-line(unsafe-typecast)
             price: uint256(price),
             timestamp: updatedAt,
             decimals: feedDecimals[asset],
@@ -127,6 +127,7 @@ contract SavannaFeedConsumer is Ownable {
         (, int256 _price, , uint256 _updatedAt,) = feed.latestRoundData();
         if (_price <= 0) revert Errors.Savanna__InvalidPrice(feedAddr);
 
+        // forge-lint: disable-next-line(unsafe-typecast)
         return (uint256(_price), feedDecimals[asset], _updatedAt);
     }
 

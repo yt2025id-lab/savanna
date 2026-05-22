@@ -27,11 +27,11 @@ library DataTypes {
     }
 
     /// @notice AI recommendation from Chainlink oracle
-    struct AIRecommendation {
+    struct AiRecommendation {
         address user;               // User address
         Protocol protocol;          // Recommended protocol
         uint256 allocationBps;      // Allocation in basis points (10000 = 100%)
-        uint256 expectedAPY;        // Expected APY in basis points
+        uint256 expectedApy;        // Expected APY in basis points
         uint8 confidence;           // AI confidence score (0-100)
         uint8 riskScore;            // Risk score (0-100, higher = safer)
         string reasoning;           // AI reasoning for recommendation

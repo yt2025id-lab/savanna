@@ -35,18 +35,30 @@ abstract contract BaseStrategy is IStrategy, Ownable {
     // ============ Modifiers ============
 
     modifier onlyVault() {
-        if (msg.sender != vault) revert Errors.Savanna__OnlyVault();
+        _onlyVault();
         _;
     }
 
     modifier onlyVaultOrController() {
-        if (msg.sender != vault && msg.sender != controller) revert Errors.Savanna__OnlyVault();
+        _onlyVaultOrController();
         _;
     }
 
     modifier onlyActive() {
-        require(active, "Strategy inactive");
+        _onlyActive();
         _;
+    }
+
+    function _onlyVault() internal view {
+        if (msg.sender != vault) revert Errors.Savanna__OnlyVault();
+    }
+
+    function _onlyVaultOrController() internal view {
+        if (msg.sender != vault && msg.sender != controller) revert Errors.Savanna__OnlyVault();
+    }
+
+    function _onlyActive() internal view {
+        require(active, "Strategy inactive");
     }
 
     // ============ IStrategy Implementation ============

@@ -29,7 +29,7 @@ contract ReserveStrategy is BaseStrategy {
     }
 
     /// @notice Idle reserve earns no yield — returns 0 APY
-    function getAPY() external pure override returns (uint256) {
+    function getApy() external pure override returns (uint256) {
         return 0;
     }
 
@@ -43,7 +43,7 @@ contract ReserveStrategy is BaseStrategy {
         // No-op: funds already transferred to this contract by BaseStrategy.deposit()
     }
 
-    function _withdrawFromProtocol(address asset, uint256 amount) internal override returns (uint256) {
+    function _withdrawFromProtocol(address asset, uint256 amount) internal view override returns (uint256) {
         uint256 balance = IERC20(asset).balanceOf(address(this));
         if (balance < amount) revert Errors.Savanna__StrategyInsufficientFunds(amount, balance);
         return amount;

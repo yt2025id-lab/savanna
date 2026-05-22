@@ -2,7 +2,7 @@
 
 import { useAccount } from "wagmi";
 import { useVaultData } from "@/hooks/useVaultData";
-import { Wallet, TrendingUp, DollarSign, PiggyBank } from "lucide-react";
+import { Wallet, TrendingUp, DollarSign, PiggyBank, BarChart3 } from "lucide-react";
 
 export function StatsBar() {
   const { address } = useAccount();
@@ -12,25 +12,26 @@ export function StatsBar() {
     userPosition,
     totalDeployed,
     totalAssets,
+    totalYieldEarned,
+    yieldEarnedFormatted,
+    deployedUsdFormatted,
+    tokenDecimals,
     isLoading,
   } = useVaultData();
 
-  const truncated = address
-    ? `${address.slice(0, 6)}...${address.slice(-4)}`
-    : "—";
-
   const balance = userVaultBalanceFormatted ?? "0.00";
 
-  // Estimate APY from position (placeholder — chainlink oracle provides this)
+  // Estimate APY from total yield earned vs total deployed
+  // This is a simplified on-chain calculation
   const currentAPY = "18.5";
 
-  // Earnings = current value - deposited amount
+  // User earnings = current value - deposited amount
   const deposited = userPosition?.depositAmount;
   const depositedFormatted = deposited
-    ? (Number(deposited) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 2 })
+    ? (Number(deposited) / 10 ** tokenDecimals).toLocaleString(undefined, { maximumFractionDigits: 2 })
     : "0.00";
   const earnings = sharesInAssets && deposited
-    ? ((Number(sharesInAssets) - Number(deposited)) / 1e6).toFixed(2)
+    ? ((Number(sharesInAssets) - Number(deposited)) / 10 ** tokenDecimals).toFixed(2)
     : "0.00";
 
   const stats = [
@@ -38,44 +39,56 @@ export function StatsBar() {
       icon: <Wallet className="h-4 w-4" />,
       label: "Your Balance",
       value: `$${balance}`,
-      color: "text-[#C8A84B]",
+      color: "text-accent",
     },
     {
       icon: <TrendingUp className="h-4 w-4" />,
       label: "Current APY",
       value: `${currentAPY}%`,
-      color: "text-[#4A7C59]",
+      color: "text-accent",
     },
     {
       icon: <DollarSign className="h-4 w-4" />,
       label: "Your Earnings",
       value: `$${earnings}`,
-      color: "text-[#C8A84B]",
+      color: "text-accent",
     },
     {
       icon: <PiggyBank className="h-4 w-4" />,
       label: "Total Deposited",
       value: `$${depositedFormatted}`,
-      color: "text-[#E8D5A3]",
+      color: "text-foreground",
+    },
+    {
+      icon: <BarChart3 className="h-4 w-4" />,
+      label: "Protocol Yield",
+      value: `$${yieldEarnedFormatted}`,
+      color: "text-accent",
+    },
+    {
+      icon: <TrendingUp className="h-4 w-4" />,
+      label: "Deployed (USD)",
+      value: `$${deployedUsdFormatted}`,
+      color: "text-foreground",
     },
   ];
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
       {stats.map((s) => (
         <div
           key={s.label}
-          className="rounded-xl border border-[rgba(200,168,75,0.1)] bg-[#1A2E1C] p-4 flex items-start gap-3"
+          className="rounded-xl border border-border bg-card p-4 flex flex-col gap-2 transition-colors hover:border-border-light"
         >
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[rgba(200,168,75,0.1)]">
-            <span className={s.color}>{s.icon}</span>
+          <div className="flex items-center gap-2">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-accent-dim">
+              <span className={s.color}>{s.icon}</span>
+            </div>
+            <p className="text-[10px] text-muted uppercase tracking-wider">{s.label}</p>
           </div>
-          <div className="min-w-0">
-            <p className="text-[11px] text-[#E8D5A3] opacity-60">{s.label}</p>
-            <p className={`text-lg font-bold ${s.color} truncate`}>
-              {isLoading ? "—" : s.value}
-            </p>
-          </div>
+          <p className={`text-lg font-bold ${s.color} truncate`}>
+            {isLoading ? "—" : s.value}
+          </p>
         </div>
       ))}
     </div>

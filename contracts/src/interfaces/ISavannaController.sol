@@ -13,7 +13,7 @@ interface ISavannaController {
         address indexed user,
         DataTypes.Protocol protocol,
         uint256 allocationBps,
-        uint256 expectedAPY,
+        uint256 expectedApy,
         string reasoning
     );
 
@@ -54,4 +54,9 @@ interface ISavannaController {
 
     /// @notice Get the strategy address for a protocol
     function getStrategy(DataTypes.Protocol protocol) external view returns (address);
+
+    // ============ Rebalance ============
+
+    /// @notice Called by vault during Chainlink Automation rebalance cycle
+    function rebalance() external view;
 }

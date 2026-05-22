@@ -36,7 +36,7 @@ interface IStrategy {
 
     /// @notice Get the current APY of the underlying protocol
     /// @return apy APY in basis points
-    function getAPY() external view returns (uint256 apy);
+    function getApy() external view returns (uint256 apy);
 
     /// @notice Get the protocol name
     /// @return name Human-readable protocol name

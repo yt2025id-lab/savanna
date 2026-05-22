@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Test, console2} from "forge-std/Test.sol";
+import {Test} from "forge-std/Test.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {MockERC20} from "../src/mocks/MockERC20.sol";
@@ -10,6 +10,7 @@ import {SavannaVault} from "../src/vault/SavannaVault.sol";
 import {SavannaController} from "../src/controller/SavannaController.sol";
 import {SavannaFeedConsumer} from "../src/feeds/SavannaFeedConsumer.sol";
 import {ReserveStrategy} from "../src/strategies/ReserveStrategy.sol";
+import {SavannaOracle} from "../src/SavannaOracle.sol";
 import {DataTypes} from "../src/libraries/DataTypes.sol";
 import {Errors} from "../src/libraries/Errors.sol";
 import {Constants} from "../src/libraries/Constants.sol";
@@ -23,6 +24,7 @@ contract SavannaVaultTest is Test {
     SavannaController public controller;
     SavannaFeedConsumer public feedConsumer;
     MockPriceFeed public priceFeed;
+    SavannaOracle public oracle;
     ReserveStrategy public reserveStrategy;
 
     // ============ Actors ============
@@ -38,11 +40,17 @@ contract SavannaVaultTest is Test {
         // Deploy mock USDC (6 decimals like real USDC)
         usdc = new MockERC20("Mock USDC", "USDC", 6, 1_000_000_000e6, owner);
 
-        // Deploy vault
-        vault = new SavannaVault(IERC20(address(usdc)), owner);
+        // Deploy oracle
+        oracle = new SavannaOracle(owner);
 
-        // Deploy mock price feed ($1.00 USDC)
+        // Deploy mock price feed ($1.00 USDC, 8 decimals)
         priceFeed = new MockPriceFeed(1e8, 8);
+
+        // Register USDC asset feed in oracle
+        oracle.setAssetFeed(address(usdc), address(priceFeed));
+
+        // Deploy vault (now requires oracle address)
+        vault = new SavannaVault(IERC20(address(usdc)), owner, address(oracle));
 
         // Deploy feed consumer
         feedConsumer = new SavannaFeedConsumer(owner);
@@ -80,10 +88,10 @@ contract SavannaVaultTest is Test {
         address user,
         uint8 protocolId,
         uint256 allocationBps,
-        uint256 expectedAPY,
+        uint256 expectedApy,
         string memory reasoning
     ) internal {
-        bytes memory report = abi.encode(user, protocolId, allocationBps, expectedAPY, reasoning);
+        bytes memory report = abi.encode(user, protocolId, allocationBps, expectedApy, reasoning);
         vm.prank(owner); // owner acts as forwarder
         controller.onReport("", report);
     }
@@ -174,9 +182,9 @@ contract SavannaVaultTest is Test {
     }
 
     function test_requestStrategy_revertControllerNotSet() public {
-        // Deploy a new vault without controller
+        // Deploy a new vault without controller (with same oracle)
         vm.prank(owner);
-        SavannaVault newVault = new SavannaVault(IERC20(address(usdc)), owner);
+        SavannaVault newVault = new SavannaVault(IERC20(address(usdc)), owner, address(oracle));
 
         vm.prank(alice);
         usdc.approve(address(newVault), type(uint256).max);
@@ -413,5 +421,130 @@ contract SavannaVaultTest is Test {
         // Verify both active
         assertEq(vault.totalDeployed(), aliceDeposit + bobDeposit);
         assertEq(vault.totalPositions(), 2);
+    }
+
+    // ============ Automation Tests ============
+
+    function test_checkUpkeep_returnsFalseBeforeInterval() public {
+        // Setup: deposit and activate strategy
+        vm.prank(alice);
+        vault.deposit(10000e6, alice);
+        vm.prank(alice);
+        vault.requestStrategy(30 days);
+        _simulateOracleReport(alice, 3, 10000, 500, "test");
+
+        // checkUpkeep should return false right after deployment (interval not elapsed)
+        (bool upkeepNeeded,) = vault.checkUpkeep("");
+        assertFalse(upkeepNeeded, "Should not need upkeep yet");
+    }
+
+    function test_checkUpkeep_returnsFalseWithNoPositions() public {
+        // Warp past interval but no positions
+        vm.warp(block.timestamp + vault.rebalanceInterval() + 1);
+
+        (bool upkeepNeeded,) = vault.checkUpkeep("");
+        assertFalse(upkeepNeeded, "No positions, no upkeep needed");
+    }
+
+    function test_checkUpkeep_returnsTrueAfterInterval() public {
+        // Setup: deposit and activate strategy
+        vm.prank(alice);
+        vault.deposit(10000e6, alice);
+        vm.prank(alice);
+        vault.requestStrategy(30 days);
+        _simulateOracleReport(alice, 3, 10000, 500, "test");
+
+        // Warp past rebalance interval
+        vm.warp(block.timestamp + vault.rebalanceInterval() + 1);
+
+        (bool upkeepNeeded,) = vault.checkUpkeep("");
+        assertTrue(upkeepNeeded, "Should need upkeep after interval");
+    }
+
+    function test_performUpkeep_success() public {
+        // Setup: deposit and activate strategy
+        vm.prank(alice);
+        vault.deposit(10000e6, alice);
+        vm.prank(alice);
+        vault.requestStrategy(30 days);
+        _simulateOracleReport(alice, 3, 10000, 500, "test");
+
+        // Warp past rebalance interval
+        vm.warp(block.timestamp + vault.rebalanceInterval() + 1);
+
+        // Execute upkeep
+        vault.performUpkeep("");
+
+        // Verify rebalance happened
+        assertEq(vault.lastRebalance(), block.timestamp, "lastRebalance should be set");
+        assertEq(vault.lastRebalanceCount(), 1, "Should have processed 1 position");
+    }
+
+    function test_performUpkeep_revertTooEarly() public {
+        // Setup: deposit and activate strategy
+        vm.prank(alice);
+        vault.deposit(10000e6, alice);
+        vm.prank(alice);
+        vault.requestStrategy(30 days);
+        _simulateOracleReport(alice, 3, 10000, 500, "test");
+
+        // Try to rebalance immediately (should fail)
+        vm.expectRevert("Too early for rebalance");
+        vault.performUpkeep("");
+    }
+
+    function test_performUpkeep_revertNoPositions() public {
+        // Warp past interval but no positions active
+        vm.warp(block.timestamp + vault.rebalanceInterval() + 1);
+
+        vm.expectRevert("No active positions");
+        vault.performUpkeep("");
+    }
+
+    function test_setRebalanceInterval_success() public {
+        vm.prank(owner);
+        vault.setRebalanceInterval(2 hours);
+        assertEq(vault.rebalanceInterval(), 2 hours);
+    }
+
+    function test_setRebalanceInterval_revertTooShort() public {
+        vm.prank(owner);
+        vm.expectRevert(abi.encodeWithSelector(Errors.Savanna__InvalidParameter.selector, "interval too short"));
+        vault.setRebalanceInterval(30 minutes);
+    }
+
+    // ============ Oracle Integration Tests ============
+
+    function test_getAssetPriceUsd() public view {
+        uint256 price = vault.getAssetPriceUsd();
+        // MockPriceFeed returns 1e8 (8 decimals), normalized to 18 decimals = 1e18
+        assertEq(price, 1e18, "USDC price should be $1.00 in 18 decimals");
+    }
+
+    function test_getTotalDeployedValueUsd() public {
+        vm.prank(alice);
+        vault.deposit(10000e6, alice);
+        vm.prank(alice);
+        vault.requestStrategy(30 days);
+        _simulateOracleReport(alice, 3, 10000, 500, "test");
+
+        uint256 value = vault.getTotalDeployedValueUsd();
+        // 10000 USDC * $1.00 price = 10000e6 * 1e18 / 1e18 = 10000e6...
+        // But price is 1e18 per 1 unit (6 decimals), so: 10000e6 * 1e18 / 1e18 = 10000e6
+        assertGt(value, 0, "Deployed value should be > 0");
+    }
+
+    function test_setOracle_success() public {
+        vm.startPrank(owner);
+        SavannaOracle newOracle = new SavannaOracle(owner);
+        vault.setOracle(address(newOracle));
+        assertEq(address(vault.oracle()), address(newOracle));
+        vm.stopPrank();
+    }
+
+    function test_setOracle_revertZeroAddress() public {
+        vm.prank(owner);
+        vm.expectRevert(Errors.Savanna__ZeroAddress.selector);
+        vault.setOracle(address(0));
     }
 }

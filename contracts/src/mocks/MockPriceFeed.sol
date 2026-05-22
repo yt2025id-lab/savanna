@@ -32,7 +32,8 @@ contract MockPriceFeed is AggregatorV3Interface {
             uint80 answeredInRound
         )
     {
-        return (_roundId, _price, _updatedAt - 10, _updatedAt, _answeredInRound);
+        uint256 startedAtValue = _updatedAt > 10 ? _updatedAt - 10 : 0;
+        return (_roundId, _price, startedAtValue, _updatedAt, _answeredInRound);
     }
 
     function decimals() external view override returns (uint8) {
@@ -47,7 +48,7 @@ contract MockPriceFeed is AggregatorV3Interface {
         return 1;
     }
 
-    function getRoundData(uint80 roundId_)
+    function getRoundData(uint80)
         external
         view
         override
@@ -59,7 +60,8 @@ contract MockPriceFeed is AggregatorV3Interface {
             uint80 answeredInRound
         )
     {
-        return (_roundId, _price, _updatedAt - 10, _updatedAt, _answeredInRound);
+        uint256 startedAtValue = _updatedAt > 10 ? _updatedAt - 10 : 0;
+        return (_roundId, _price, startedAtValue, _updatedAt, _answeredInRound);
     }
 
     // ============ Admin (testing) ============

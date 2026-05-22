@@ -46,7 +46,7 @@ contract CompoundV3Strategy is BaseStrategy {
     }
 
     /// @notice Get the current APY from Compound V3 supply rate
-    function getAPY() external view override returns (uint256) {
+    function getApy() external view override returns (uint256) {
         uint256 supplyRate = IComet(COMET_MARKET).supplyRate();
         // supplyRate is per-second rate in 1e15 precision (absorb factor)
         // APY = (1 + rate/1e18)^(365*24*3600) - 1 ≈ rate * 365 * 24 * 3600 / 1e18
