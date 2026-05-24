@@ -6,13 +6,13 @@ import { gsap, ScrollTrigger } from "@/lib/gsap";
 import { AnimatedTitle } from "./AnimatedTitle";
 
 const stats = [
-  { target: 2.4, decimals: 1, suffix: "M+", label: "Total Value Locked", prefix: "$" },
-  { target: 18.5, decimals: 1, suffix: "%", label: "Average APY", prefix: "" },
-  { target: 3, decimals: 0, suffix: "", label: "Yield Protocols", prefix: "" },
-  { target: 12, decimals: 0, suffix: "+", label: "Active Vaults", prefix: "" },
+  { target: 5, decimals: 0, suffix: "+", label: "Yield Strategies", prefix: "" },
+  { target: 8, decimals: 0, suffix: "+", label: "Source Chains", prefix: "" },
+  { target: 0.1, decimals: 1, suffix: "", label: "x402 Cost (USDC)", prefix: "$" },
+  { target: 1, decimals: 0, suffix: "", label: "Second Finality", prefix: "" },
 ];
 
-const bgNumbers = ["$2.4M", "18.5%", "3", "12+"]; 
+const bgNumbers = ["5+", "8+", "$0.1", "1s"]; 
 
 export function StatsSection() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -78,17 +78,21 @@ export function StatsSection() {
         borderBottom: "1px solid rgba(200, 168, 75, 0.1)",
         position: "relative",
         zIndex: 2,
+        overflow: "hidden",
       }}
     >
-      <div ref={containerRef}>
-        <div className="section-label">Protocol Stats</div>
+      <div className="savanna-bg-anim savanna-bg-anim-bg">
+        <img src="/savanna-stats.svg" alt="" />
+      </div>
+      <div ref={containerRef} style={{ position: "relative", zIndex: 1 }}>
+        <div className="section-label">Project Stats</div>
 
         <AnimatedTitle
-          title="Growing <b>Every</b><br />Day"
+          title="Built for<br /><b>Celo</b>"
           containerClass="mb-4"
         />
 
-        <p className="section-sub" style={{ marginTop: "1rem" }}>Real numbers from a real protocol, live on Celo.</p>
+        <p className="section-sub" style={{ marginTop: "1rem" }}>Onchain Agents Hackathon — agentic payments meet DeFi yield.</p>
 
         <div className="stats-grid">
           {stats.map((s, i) => (

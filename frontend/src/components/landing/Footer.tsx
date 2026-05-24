@@ -63,28 +63,42 @@ export function LandingFooter() {
         className="cta-section"
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
+        style={{ overflow: "hidden" }}
       >
+        <div className="savanna-bg-anim savanna-bg-anim-fg">
+          <img src="/savanna-cta.svg" alt="" />
+        </div>
+        <div style={{ position: "relative", zIndex: 1 }}>
         <AnimatedTitle
           title="Ready to <b>Grow</b><br />Your <b>Yield</b>?"
           containerClass="mb-4"
         />
 
         <p style={{ color: "#E8D5A3", fontSize: "1.1rem", marginBottom: "2.5rem", position: "relative", opacity: 0.85 }}>
-          Join the savanna — earn yield on Celo with AI-powered optimization
+          Join the savanna — AI agents pay, MiniPay deposits in one tap, yield grows on Celo
         </p>
-        <Link
-          ref={btnRef as React.Ref<HTMLAnchorElement>}
-          href="/earn"
-          className="btn-cta"
-          style={{ position: "relative", display: "inline-flex" }}
-        >
-          Launch App Now →
-        </Link>
+        <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap" }}>
+          <Link
+            ref={btnRef as React.Ref<HTMLAnchorElement>}
+            href="/earn"
+            className="btn-cta"
+            style={{ position: "relative", display: "inline-flex" }}
+          >
+            Launch App Now →
+          </Link>
+          <a href="#how-it-works" className="btn-outline" style={{ position: "relative", display: "inline-flex" }}>
+            See How It Works
+          </a>
+        </div>
+        </div>
       </section>
 
       {/* Footer */}
-      <footer className="footer">
-        <div className="footer-inner">
+      <footer className="footer" style={{ overflow: "hidden", position: "relative" }}>
+        <div className="savanna-bg-anim savanna-bg-anim-night">
+          <img src="/savanna-footer.svg" alt="" />
+        </div>
+        <div className="footer-inner" style={{ position: "relative", zIndex: 1 }}>
           <div className="footer-brand">
             <div className="footer-logo">
               <LogoMark size={20} />
@@ -92,15 +106,25 @@ export function LandingFooter() {
             </div>
             <p>Yield That Grows Naturally</p>
           </div>
-          <div className="footer-links">
-            <a href="#">Twitter</a>
-            <a href="#">Discord</a>
-            <a href="#">GitHub</a>
-            <a href="#">Docs</a>
+          <div className="footer-cols">
+            <div className="footer-col">
+              <h4>Product</h4>
+              <Link href="/earn">Earn</Link>
+              <Link href="/portfolio">Portfolio</Link>
+              <Link href="/ai">AI Agent</Link>
+              <Link href="/faucet">Faucet</Link>
+            </div>
+            <div className="footer-col">
+              <h4>Resources</h4>
+              <a href="https://github.com/yt2025id-lab/savanna" target="_blank" rel="noopener noreferrer">GitHub</a>
+              <a href="https://celoscan.io" target="_blank" rel="noopener noreferrer">Celoscan</a>
+              <a href="https://docs.celo.org" target="_blank" rel="noopener noreferrer">Celo Docs</a>
+              <a href="https://x402.org" target="_blank" rel="noopener noreferrer">x402 Protocol</a>
+            </div>
           </div>
         </div>
-        <div className="footer-bottom">
-          Built on Celo · © 2026 Savanna Finance. All rights reserved.
+        <div className="footer-bottom" style={{ position: "relative", zIndex: 1 }}>
+          Built on Celo · Onchain Agents Hackathon · x402 · MiniPay · © 2026 Savanna Finance
         </div>
       </footer>
     </>

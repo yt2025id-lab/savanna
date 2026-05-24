@@ -6,14 +6,13 @@ import { gsap } from "@/lib/gsap";
 export function CustomCursor() {
   const dotRef = useRef<HTMLDivElement>(null);
   const ringRef = useRef<HTMLDivElement>(null);
+  const glowRef = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
   const [hovering, setHovering] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-
-    // Check for touch device — skip custom cursor
-    if ("ontouchstart" in window) return;
+    if ("ontouchstart" in window || window.innerWidth < 768) return;
 
     const moveCursor = (e: MouseEvent) => {
       if (!visible) setVisible(true);
@@ -30,6 +29,14 @@ export function CustomCursor() {
           x: e.clientX,
           y: e.clientY,
           duration: 0.4,
+          ease: "power2.out",
+        });
+      }
+      if (glowRef.current) {
+        gsap.to(glowRef.current, {
+          x: e.clientX,
+          y: e.clientY,
+          duration: 0.25,
           ease: "power2.out",
         });
       }
@@ -73,6 +80,12 @@ export function CustomCursor() {
 
   return (
     <>
+      {/* Sun glow */}
+      <div
+        ref={glowRef}
+        className="cursor-sun-glow"
+        style={{ opacity: visible ? 1 : 0 }}
+      />
       {/* Dot */}
       <div
         ref={dotRef}

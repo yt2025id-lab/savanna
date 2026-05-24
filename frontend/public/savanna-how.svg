@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 480" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="how-sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#A0C8A0"/>
+      <stop offset="25%" stop-color="#C0D4A0"/>
+      <stop offset="50%" stop-color="#D4E0B0"/>
+      <stop offset="75%" stop-color="#B8C890"/>
+      <stop offset="100%" stop-color="#8BA878"/>
+    </linearGradient>
+    <radialGradient id="how-sun" cx="70%" cy="30%" r="30%">
+      <stop offset="0%" stop-color="#FFF8E0" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#D4E0B0" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="how-water" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#6A9B8A" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#4A7A6A" stop-opacity="0.8"/>
+    </linearGradient>
+  </defs>
+  <rect width="1920" height="480" fill="url(#how-sky)"/>
+  <rect width="1920" height="480" fill="url(#how-sun)"/>
+  <circle cx="1350" cy="120" r="45" fill="#FFF8E0" opacity="0.5"/>
+  <circle cx="1350" cy="120" r="28" fill="#FFFEF5" opacity="0.7"/>
+  <path d="M0 280 Q200 260 500 290 Q800 320 1100 280 Q1400 250 1920 280 L1920 480 L0 480Z" fill="#8BA878" opacity="0.35"/>
+  <path d="M400 340 Q500 310 700 320 Q900 330 1000 310 Q1100 290 1200 320 Q1300 340 1400 310 Q1500 290 1600 320 L1600 400 Q1500 380 1400 400 Q1300 420 1200 390 Q1100 370 1000 400 Q900 420 700 390 Q500 370 400 400Z" fill="url(#how-water)"/>
+  <path d="M420 340 Q520 312 700 322 Q920 332 1020 312 Q1120 292 1220 322 Q1320 342 1420 312 Q1520 292 1620 322 L1620 332 Q1520 302 1420 322 Q1320 352 1220 332 Q1120 302 1020 322 Q920 342 720 332 Q520 322 420 350Z" fill="#8ABAA0" opacity="0.4"/>
+  <ellipse cx="900" cy="365" rx="80" ry="5" fill="#9AC8B0" opacity="0.3"/>
+  <ellipse cx="1100" cy="355" rx="60" ry="4" fill="#9AC8B0" opacity="0.25"/>
+  <rect x="180" y="230" width="10" height="85" rx="3" fill="#5A4520" opacity="0.7"/>
+  <path d="M185 230 Q145 242 120 268 Q155 255 185 262 Q140 238 115 225 Q150 238 185 252 Q135 220 115 205 Q150 230 185 248Z" fill="#6B8F50" opacity="0.6"/>
+  <ellipse cx="185" cy="238" rx="58" ry="15" fill="#6B8F50" opacity="0.5"/>
+  <rect x="1620" y="220" width="12" height="95" rx="4" fill="#5A4520" opacity="0.7"/>
+  <path d="M1626 220 Q1585 235 1560 262 Q1595 248 1625 258 Q1580 232 1555 220 Q1590 233 1625 248 Q1580 215 1558 200 Q1590 225 1626 245Z" fill="#6B8F50" opacity="0.6"/>
+  <ellipse cx="1626" cy="228" rx="62" ry="16" fill="#6B8F50" opacity="0.5"/>
+  <g transform="translate(700, 240) scale(0.6)" opacity="0.5">
+    <rect x="47" y="30" width="5" height="55" rx="2" fill="#5A4A25"/>
+    <path d="M50 30 Q30 38 20 50 Q35 44 50 48 Q28 35 18 28 Q35 36 50 42 Q25 25 15 18 Q30 30 50 38Z" fill="#6B8F50" opacity="0.8"/>
+    <ellipse cx="50" cy="34" rx="30" ry="10" fill="#6B8F50" opacity="0.6"/>
+  </g>
+  <path d="M0 400 Q300 390 600 405 Q900 418 1200 395 Q1500 380 1920 400 L1920 480 L0 480Z" fill="#7A9568" opacity="0.6"/>
+  <path d="M0 430 Q400 420 800 432 Q1200 444 1600 425 Q1800 418 1920 428 L1920 480 L0 480Z" fill="#6A8548" opacity="0.7"/>
+  <path d="M0 455 Q300 448 600 458 Q900 465 1200 452 Q1500 440 1920 455 L1920 480 L0 480Z" fill="#5A7538" opacity="0.8"/>
+  <g opacity="0.3">
+    <circle cx="800" cy="100" r="2" fill="#FFF8E0"/>
+    <circle cx="200" cy="80" r="1.5" fill="#FFF8E0"/>
+    <circle cx="1200" cy="90" r="2" fill="#FFF8E0"/>
+    <circle cx="1500" cy="70" r="1.5" fill="#FFF8E0"/>
+    <circle cx="400" cy="110" r="1" fill="#FFF8E0"/>
+    <circle cx="1700" cy="100" r="1.5" fill="#FFF8E0"/>
+  </g>
+  <g opacity="0.35">
+    <path d="M650 280 Q660 270 670 278" fill="none" stroke="#5A4A25" stroke-width="1.5"/>
+    <path d="M950 275 Q960 265 970 273" fill="none" stroke="#5A4A25" stroke-width="1.5"/>
+    <path d="M1250 282 Q1260 272 1270 280" fill="none" stroke="#5A4A25" stroke-width="1.5"/>
+  </g>
+  <g transform="translate(350, 300) scale(0.4)" opacity="0.4">
+    <path d="M0 0 Q5 -8 10 0 Q15 -12 20 0 Q25 -6 30 0" fill="none" stroke="#5A4A25" stroke-width="2"/>
+  </g>
+  <g transform="translate(1400, 305) scale(0.4)" opacity="0.35">
+    <path d="M0 0 Q5 -8 10 0 Q15 -12 20 0 Q25 -6 30 0" fill="none" stroke="#5A4A25" stroke-width="2"/>
+  </g>
+</svg>

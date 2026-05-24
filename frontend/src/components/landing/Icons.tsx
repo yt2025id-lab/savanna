@@ -21,20 +21,15 @@ export function LeafIcon({ size = 24, color = "#C8A84B" }: { size?: number; colo
   );
 }
 
-export function LogoMark({ size = 28, color = "#C8A84B" }: { size?: number; color?: string }) {
+export function LogoMark({ size = 28 }: { size?: number; color?: string }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="16" cy="16" r="14" stroke={color} strokeWidth="1.5" />
-      <path
-        d="M16 6C16 6 10 12 10 18C10 21.3 12.7 24 16 24C19.3 24 22 21.3 22 18C22 12 16 6 16 6Z"
-        stroke={color}
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill={`${color}15`}
-      />
-      <path d="M13 18C13 16 16 13 16 13" stroke={color} strokeWidth="1.2" strokeLinecap="round" />
-    </svg>
+    <img
+      src="/logosavannafinance.png"
+      alt="Savanna Finance"
+      width={size}
+      height={size}
+      style={{ objectFit: "contain" }}
+    />
   );
 }
 

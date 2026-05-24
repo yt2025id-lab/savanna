@@ -16,11 +16,9 @@ export function AboutSection() {
     const clipAnimation = gsap.timeline({
       scrollTrigger: {
         trigger: "#about-clip",
-        start: "center center",
-        end: "+=800 center",
+        start: "center 80%",
+        end: "center 20%",
         scrub: 0.5,
-        pin: true,
-        pinSpacing: true,
       },
     });
 
@@ -56,32 +54,38 @@ export function AboutSection() {
         background: "linear-gradient(180deg, #0D1A0F 0%, #111F13 50%, #0D1A0F 100%)",
         position: "relative",
         zIndex: 2,
+        overflow: "hidden",
       }}
     >
-      <div ref={containerRef}>
-        <div className="anim-up section-label">What is Savanna</div>
+      <div className="savanna-bg-anim savanna-bg-anim-bg">
+        <img src="/savanna-about.svg" alt="" />
+      </div>
+      <div ref={containerRef} style={{ position: "relative", zIndex: 1 }}>
+        <div style={{ position: "relative", zIndex: 30, background: "linear-gradient(180deg, #0D1A0F 0%, #111F13 60%, transparent 100%)", paddingBottom: "2rem" }}>
+          <div className="anim-up section-label">What is Savanna</div>
 
-        <AnimatedTitle
-          title="Intelligent <b>Yield</b><br />Protocol for <b>Celo</b>"
-          containerClass="mb-6"
-        />
+          <AnimatedTitle
+            title="Intelligent <b>Yield</b><br />Protocol for <b>Celo</b>"
+            containerClass="mb-6"
+          />
 
-        <p
-          className="anim-up section-sub"
-          style={{ marginTop: "1rem" }}
-        >
-          AI-powered yield optimization across Aave V3, Moola, and Mento savings, with cross-chain deposits and Chainlink-secured price data.
-        </p>
+          <p
+            className="anim-up section-sub"
+            style={{ marginTop: "1rem" }}
+          >
+            AI-powered yield optimization across Aave V3 and Mento Savings, with x402 micropayments for autonomous strategy analysis and MiniPay zero-click deposits.
+          </p>
+        </div>
 
         {/* Clip-path expanding visual (Zentry-style) */}
-        <div id="about-clip" style={{ height: "100dvh", width: "100vw", position: "relative", marginTop: "2rem" }}>
+        <div id="about-clip" style={{ height: "80vh", width: "100%", position: "relative", marginTop: "2rem" }}>
           <div
             className="about-mask-clip"
             style={{
               position: "absolute",
               left: "50%",
               top: 0,
-              zIndex: 20,
+              zIndex: 5,
               height: "60vh",
               width: "380px",
               transformOrigin: "center",
@@ -114,21 +118,21 @@ export function AboutSection() {
               >
                 <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.5rem" }}>
                   <ChartBarIcon size={16} color="#E8D5A3" />
-                  <span style={{ fontSize: "0.85rem", color: "#E8D5A3" }}>Current Average APY</span>
+                  <span style={{ fontSize: "1.7rem", color: "#E8D5A3" }}>AI-Optimized APY</span>
                 </div>
                 <div
                   style={{
                     fontFamily: "Georgia, serif",
-                    fontSize: "clamp(3rem, 6vw, 4.5rem)",
+                    fontSize: "clamp(6rem, 12vw, 9rem)",
                     fontWeight: 900,
                     color: "#C8A84B",
                     lineHeight: 1,
                   }}
                 >
-                  18.5%
+                  Auto
                 </div>
-                <div style={{ fontSize: "0.8rem", color: "#6B8F71", marginTop: "0.5rem" }}>
-                  Auto-compounded · Real-time rebalancing
+                  <div style={{ fontSize: "1.6rem", color: "#6B8F71", marginTop: "0.5rem" }}>
+                  x402 micropayments · AI scans &amp; rebalances
                 </div>
 
                 <div
@@ -140,16 +144,16 @@ export function AboutSection() {
                   }}
                 >
                   <div style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#C8A84B" }}>$2.4M+</div>
-                    <div style={{ fontSize: "0.75rem", color: "#6B8F71" }}>TVL</div>
+                    <div style={{ fontSize: "3rem", fontWeight: 700, color: "#C8A84B" }}>x402</div>
+                    <div style={{ fontSize: "1.5rem", color: "#6B8F71" }}>Micropayments</div>
                   </div>
                   <div style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#4A7C59" }}>3</div>
-                    <div style={{ fontSize: "0.75rem", color: "#6B8F71" }}>Yield Protocols</div>
+                    <div style={{ fontSize: "3rem", fontWeight: 700, color: "#4A7C59" }}>MiniPay</div>
+                    <div style={{ fontSize: "1.5rem", color: "#6B8F71" }}>Zero-Click</div>
                   </div>
                   <div style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#E8D5A3" }}>24/7</div>
-                    <div style={{ fontSize: "0.75rem", color: "#6B8F71" }}>Monitoring</div>
+                    <div style={{ fontSize: "3rem", fontWeight: 700, color: "#E8D5A3" }}>ERC-8004</div>
+                    <div style={{ fontSize: "1.5rem", color: "#6B8F71" }}>Agent Trust</div>
                   </div>
                 </div>
               </div>
@@ -171,7 +175,7 @@ export function AboutSection() {
         </div>
 
         {/* Description below the clip */}
-        <div style={{ maxWidth: "800px", margin: "0 auto", padding: "2rem 1rem" }}>
+        <div style={{ maxWidth: "800px", margin: "0 auto", padding: "2rem 1rem", position: "relative", zIndex: 30, background: "linear-gradient(180deg, transparent 0%, #111F13 30%, #0D1A0F 100%)", paddingTop: "3rem" }}>
           <p
             className="anim-up"
             style={{
@@ -183,9 +187,10 @@ export function AboutSection() {
             }}
           >
             <strong style={{ color: "#C8A84B" }}>Savanna Finance</strong> is
-            the AI-powered yield protocol native to Celo. Built for the next
-            generation of DeFi — combining intelligent yield optimization,
-            cross-chain deposits, and Chainlink-secured price data.
+            the AI-powered yield protocol native to Celo — built for the
+            Onchain Agents Hackathon. AI agents autonomously pay for strategy
+            analysis via x402 micropayments, MiniPay users deposit with zero
+            clicks, and the ERC-4626 vault deploys capital to the highest yield.
           </p>
           <p
             className="anim-up"
@@ -197,15 +202,16 @@ export function AboutSection() {
               textAlign: "center",
             }}
           >
-            Our ERC-4626 vault uses Chainlink price feeds to continuously scan
-            lending and savings protocols on Celo — Aave V3, Moola, and Mento Savings — and rebalance
-            your position to the highest yield, automatically.
+            Our vault uses Chainlink price feeds to continuously scan
+            lending and savings protocols on Celo — Aave V3 and Mento Savings — and rebalance
+            your position to the highest yield, automatically. ERC-8004 agent identity
+            ensures trust between autonomous AI and your funds.
           </p>
           <div
             className="anim-up"
             style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", justifyContent: "center" }}
           >
-            {["ERC-4626 Vault", "Chainlink Oracle", "Mento Savings", "LI.FI Bridge", "OpenZeppelin"].map(
+            {["ERC-4626", "Chainlink Oracle", "x402 Payments", "MiniPay", "ERC-8004 Agent", "LI.FI Bridge"].map(
               (tech) => (
                 <span
                   key={tech}

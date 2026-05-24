@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 480" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="feat-sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#C89040"/>
+      <stop offset="30%" stop-color="#D4A555"/>
+      <stop offset="60%" stop-color="#E8C080"/>
+      <stop offset="100%" stop-color="#B0853A"/>
+    </linearGradient>
+    <radialGradient id="feat-sun" cx="30%" cy="50%" r="35%">
+      <stop offset="0%" stop-color="#F7D794" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#D4A555" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="feat-ground" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#9B8340"/>
+      <stop offset="100%" stop-color="#6B5A30"/>
+    </linearGradient>
+  </defs>
+  <rect width="1920" height="480" fill="url(#feat-sky)"/>
+  <rect width="1920" height="480" fill="url(#feat-sun)"/>
+  <circle cx="580" cy="180" r="50" fill="#F7D794" opacity="0.4"/>
+  <circle cx="580" cy="180" r="30" fill="#FFF0C8" opacity="0.6"/>
+  <path d="M0 320 Q300 300 600 325 Q900 350 1200 310 Q1500 280 1920 310 L1920 480 L0 480Z" fill="#A08838" opacity="0.4"/>
+  <path d="M0 360 Q250 345 500 365 Q750 380 1000 355 Q1250 335 1500 360 Q1750 378 1920 360 L1920 480 L0 480Z" fill="#8B7340" opacity="0.5"/>
+  <path d="M0 400 Q400 385 800 400 Q1200 415 1600 390 Q1800 380 1920 395 L1920 480 L0 480Z" fill="#7A6535" opacity="0.6"/>
+  <g transform="translate(300, 280) scale(0.8)" opacity="0.6">
+    <ellipse cx="40" cy="55" rx="30" ry="22" fill="#7A6A40"/>
+    <rect x="35" y="15" width="8" height="42" rx="3" fill="#7A6A40"/>
+    <rect x="48" y="18" width="6" height="37" rx="2" fill="#7A6A40"/>
+    <ellipse cx="30" cy="22" rx="18" ry="16" fill="#7A6A40"/>
+    <path d="M15 18 Q10 5 14 -8 Q18 5 22 16" fill="#7A6A40"/>
+    <path d="M42 18 Q38 8 42 -2 Q46 8 48 16" fill="#7A6A40"/>
+    <rect x="25" y="55" width="7" height="22" rx="2" fill="#6A5A35"/>
+    <rect x="45" y="53" width="7" height="24" rx="2" fill="#6A5A35"/>
+  </g>
+  <g transform="translate(900, 260) scale(0.7)" opacity="0.55">
+    <ellipse cx="50" cy="120" rx="20" ry="15" fill="#7A6A40"/>
+    <rect x="47" y="50" width="5" height="72" rx="2" fill="#6A5A35"/>
+    <ellipse cx="50" cy="50" rx="12" ry="10" fill="#7A6A40"/>
+    <path d="M42 45 Q38 32 42 20 Q46 32 50 42" fill="#7A6A40"/>
+    <path d="M55 45 Q52 35 55 25 Q58 35 58 44" fill="#7A6A40"/>
+    <rect x="43" y="120" width="5" height="25" rx="2" fill="#5A4A25"/>
+    <rect x="52" y="118" width="5" height="27" rx="2" fill="#5A4A25"/>
+    <path d="M38 42 L32 20 L42 38" fill="#7A6A40" opacity="0.8"/>
+    <path d="M60 42 L66 22 L56 38" fill="#7A6A40" opacity="0.8"/>
+  </g>
+  <g transform="translate(1300, 290) scale(0.5)" opacity="0.5">
+    <ellipse cx="35" cy="50" rx="28" ry="18" fill="#7A6A40"/>
+    <rect x="30" y="20" width="7" height="32" rx="3" fill="#7A6A40"/>
+    <rect x="42" y="22" width="5" height="28" rx="2" fill="#7A6A40"/>
+    <ellipse cx="25" cy="25" rx="15" ry="13" fill="#7A6A40"/>
+    <path d="M12 20 Q8 8 12 -5 Q15 8 18 18" fill="#7A6A40"/>
+    <rect x="22" y="50" width="6" height="20" rx="2" fill="#6A5A35"/>
+    <rect x="38" y="48" width="6" height="22" rx="2" fill="#6A5A35"/>
+  </g>
+  <rect x="200" y="260" width="10" height="80" rx="3" fill="#5A4520" opacity="0.7"/>
+  <path d="M205 260 Q165 272 140 295 Q175 282 205 290 Q160 265 130 250 Q170 262 205 278 Q155 245 130 230 Q170 255 205 270Z" fill="#6B8F50" opacity="0.6"/>
+  <ellipse cx="205" cy="268" rx="60" ry="16" fill="#6B8F50" opacity="0.5"/>
+  <rect x="1500" y="250" width="11" height="90" rx="4" fill="#5A4520" opacity="0.7"/>
+  <path d="M1506 250 Q1465 262 1440 288 Q1475 275 1505 282 Q1460 258 1435 245 Q1470 258 1505 270 Q1460 240 1440 225 Q1470 250 1506 268Z" fill="#6B8F50" opacity="0.6"/>
+  <ellipse cx="1506" cy="258" rx="60" ry="16" fill="#6B8F50" opacity="0.5"/>
+  <rect x="750" y="280" width="8" height="60" rx="3" fill="#5A4520" opacity="0.5"/>
+  <path d="M754 280 Q725 290 710 305 Q730 298 754 302 Q725 285 710 275 Q730 284 754 295Z" fill="#6B8F50" opacity="0.5"/>
+  <ellipse cx="754" cy="284" rx="38" ry="10" fill="#6B8F50" opacity="0.4"/>
+  <path d="M0 430 Q400 418 800 430 Q1200 442 1600 420 Q1800 412 1920 425 L1920 480 L0 480Z" fill="#6B5A30" opacity="0.7"/>
+  <path d="M0 455 Q300 448 600 458 Q900 465 1200 450 Q1500 438 1920 452 L1920 480 L0 480Z" fill="#5A4A25" opacity="0.85"/>
+  <g opacity="0.25">
+    <path d="M100 380 Q102 358 106 336 Q108 358 110 380" fill="#8B7340" stroke="none"/>
+    <path d="M400 375 Q402 350 406 325 Q408 350 410 375" fill="#8B7340" stroke="none"/>
+    <path d="M1100 370 Q1102 348 1106 326 Q1108 348 1110 370" fill="#8B7340" stroke="none"/>
+    <path d="M1600 372 Q1602 352 1606 332 Q1608 352 1610 372" fill="#8B7340" stroke="none"/>
+  </g>
+</svg>

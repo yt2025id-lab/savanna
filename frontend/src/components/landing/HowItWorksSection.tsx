@@ -11,7 +11,7 @@ const steps = [
     num: 1,
     keyword: "CONNECT",
     title: "Connect Wallet",
-    desc: "Connect your wallet from any supported chain. MetaMask, Rainbow, Coinbase Wallet and more.",
+    desc: "MiniPay users auto-connect — zero clicks. MetaMask, Rainbow, Coinbase Wallet, and more supported across all chains.",
     icon: <LinkIcon size={20} />,
     microClass: "micro-pulse",
   },
@@ -19,15 +19,15 @@ const steps = [
     num: 2,
     keyword: "DEPOSIT",
     title: "Deposit Assets",
-    desc: "Bridge from any chain via LI.FI or deposit USDC directly on Celo. Receive svYLD vault shares representing your position.",
+    desc: "Bridge from any chain via LI.FI or deposit USDC directly on Celo. MiniPay users get reduced minimums and fee-covered transactions.",
     icon: <CoinIcon size={20} />,
     microClass: "micro-coin",
   },
   {
     num: 3,
-    keyword: "EARN",
-    title: "Earn Automatically",
-    desc: "AI scans Aave V3, Moola, and Mento Savings rates and deploys your funds to the highest yield. Watch your svYLD balance grow.",
+    keyword: "PAY & EARN",
+    title: "AI Pays, You Earn",
+    desc: "AI agents pay $0.10 via x402 micropayments for strategy analysis, then deploy your funds to the highest yield on Aave V3 or Mento Savings.",
     icon: <ChartIcon size={20} />,
     microClass: "micro-chart",
   },
@@ -126,6 +126,9 @@ export function HowItWorksSection() {
         overflow: "hidden",
       }}
     >
+      <div className="savanna-bg-anim savanna-bg-anim-mid">
+        <img src="/savanna-how.svg" alt="" />
+      </div>
       <div ref={containerRef} style={{ position: "relative" }}>
         {/* Background keyword */}
         <div
@@ -145,7 +148,7 @@ export function HowItWorksSection() {
             opacity: 0.04,
           }}
         >
-          CONNECT · DEPOSIT · EARN
+          CONNECT · DEPOSIT · PAY & EARN
         </div>
 
         <div style={{ position: "relative", zIndex: 1 }}>
@@ -157,7 +160,7 @@ export function HowItWorksSection() {
           />
 
           <p className="section-sub" style={{ marginTop: "1rem" }}>
-            From any chain to earning yield on Celo — powered by AI.
+            MiniPay auto-connect, x402 agent payments, and AI yield optimization on Celo.
           </p>
 
           <div className="steps-container">

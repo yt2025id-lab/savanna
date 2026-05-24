@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 200" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="footer-sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0A1208"/>
+      <stop offset="40%" stop-color="#0D1A0F"/>
+      <stop offset="70%" stop-color="#111F13"/>
+      <stop offset="100%" stop-color="#0D1A0F"/>
+    </linearGradient>
+    <radialGradient id="footer-moon-glow" cx="75%" cy="30%" r="15%">
+      <stop offset="0%" stop-color="#E8D5A3" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#0D1A0F" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1920" height="200" fill="url(#footer-sky)"/>
+  <rect width="1920" height="200" fill="url(#footer-moon-glow)"/>
+  <circle cx="1440" cy="50" r="22" fill="#E8D5A3" opacity="0.7"/>
+  <circle cx="1450" cy="45" r="18" fill="#0A1208" opacity="0.9"/>
+  <g opacity="0.6">
+    <circle cx="200" cy="25" r="1.5" fill="#F5EDD6"/>
+    <circle cx="400" cy="40" r="1" fill="#F5EDD6"/>
+    <circle cx="550" cy="15" r="1.5" fill="#F5EDD6"/>
+    <circle cx="700" cy="50" r="1" fill="#F5EDD6"/>
+    <circle cx="850" cy="20" r="2" fill="#F5EDD6"/>
+    <circle cx="1050" cy="35" r="1" fill="#F5EDD6"/>
+    <circle cx="1200" cy="18" r="1.5" fill="#F5EDD6"/>
+    <circle cx="1350" cy="55" r="1" fill="#F5EDD6"/>
+    <circle cx="1550" cy="28" r="1.5" fill="#F5EDD6"/>
+    <circle cx="1700" cy="45" r="1" fill="#F5EDD6"/>
+    <circle cx="1850" cy="22" r="2" fill="#F5EDD6"/>
+    <circle cx="100" cy="55" r="1" fill="#F5EDD6"/>
+    <circle cx="300" cy="12" r="1.5" fill="#F5EDD6"/>
+    <circle cx="650" cy="60" r="1" fill="#F5EDD6"/>
+    <circle cx="900" cy="10" r="1.5" fill="#F5EDD6"/>
+    <circle cx="1100" cy="52" r="1" fill="#F5EDD6"/>
+    <circle cx="1600" cy="12" r="1.5" fill="#F5EDD6"/>
+    <circle cx="1800" cy="58" r="1" fill="#F5EDD6"/>
+    <circle cx="50" cy="38" r="1.5" fill="#F5EDD6"/>
+    <circle cx="475" cy="58" r="1" fill="#F5EDD6"/>
+    <circle cx="780" cy="8" r="1" fill="#F5EDD6"/>
+    <circle cx="950" cy="42" r="1.5" fill="#F5EDD6"/>
+    <circle cx="1250" cy="30" r="1" fill="#F5EDD6"/>
+    <circle cx="1480" cy="48" r="1" fill="#F5EDD6"/>
+    <circle cx="1650" cy="15" r="1.5" fill="#F5EDD6"/>
+  </g>
+  <rect x="250" y="100" width="6" height="50" rx="2" fill="#1A2E1C" opacity="0.8"/>
+  <path d="M253 100 Q232 108 220 120 Q238 112 253 116 Q230 102 218 95 Q235 105 253 112Z" fill="#1A3A1C" opacity="0.6"/>
+  <ellipse cx="253" cy="104" rx="30" ry="8" fill="#1A3A1C" opacity="0.5"/>
+  <rect x="950" y="95" width="8" height="55" rx="3" fill="#1A2E1C" opacity="0.8"/>
+  <path d="M954 95 Q928 105 915 120 Q935 110 954 115 Q925 100 912 92 Q932 102 954 110Z" fill="#1A3A1C" opacity="0.6"/>
+  <ellipse cx="954" cy="100" rx="35" ry="9" fill="#1A3A1C" opacity="0.5"/>
+  <rect x="1600" y="98" width="7" height="52" rx="2" fill="#1A2E1C" opacity="0.75"/>
+  <path d="M1604 98 Q1582 106 1570 118 Q1586 110 1604 114 Q1580 100 1568 93 Q1585 103 1604 110Z" fill="#1A3A1C" opacity="0.55"/>
+  <ellipse cx="1604" cy="102" rx="32" ry="8" fill="#1A3A1C" opacity="0.45"/>
+  <path d="M0 150 Q300 140 600 155 Q900 165 1200 145 Q1500 132 1920 150 L1920 200 L0 200Z" fill="#111F13" opacity="0.6"/>
+  <path d="M0 170 Q400 162 800 172 Q1200 182 1600 168 Q1800 162 1920 170 L1920 200 L0 200Z" fill="#0F1D11" opacity="0.75"/>
+  <path d="M0 188 Q300 183 600 190 Q900 195 1200 185 Q1500 180 1920 188 L1920 200 L0 200Z" fill="#0D1A0F" opacity="0.9"/>
+</svg>
