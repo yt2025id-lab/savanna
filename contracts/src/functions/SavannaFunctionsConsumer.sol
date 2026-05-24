@@ -49,6 +49,20 @@ contract SavannaFunctionsConsumer is FunctionsClient, Ownable {
     uint256 public totalRequestsSent;
     /// @notice Total AI responses received
     uint256 public totalResponsesReceived;
+    /// @notice x402 payment endpoint URL for off-chain AI analysis
+    string public x402Endpoint;
+    /// @notice x402 payment required per request (in USDC base units)
+    uint256 public x402PricePerRequest;
+    /// @notice Whether x402 payment is required before AI requests
+    bool public x402Enabled;
+    /// @notice Track x402 payments: requestId => paymentVerified
+    mapping(bytes32 => bool) public x402PaymentVerified;
+    /// @notice Track x402 pre-payment status: prelimId => paid
+    mapping(bytes32 => bool) public x402PrePaid;
+    /// @notice Track x402 pre-payment requests: prelimId => user
+    mapping(bytes32 => address) public x402PrePayUser;
+    /// @notice Track x402 pre-payment params: prelimId => timeHorizon
+    mapping(bytes32 => uint256) public x402PrePayTimeHorizon;
 
     // ============ Events ============
 
@@ -67,6 +81,11 @@ contract SavannaFunctionsConsumer is FunctionsClient, Ownable {
     event DonIdUpdated(bytes32 oldDonId, bytes32 newDonId);
     event ControllerUpdated(address oldController, address newController);
     event CallbackGasLimitUpdated(uint32 oldLimit, uint32 newLimit);
+    event X402EndpointUpdated(string oldEndpoint, string newEndpoint);
+    event X402PriceUpdated(uint256 oldPrice, uint256 newPrice);
+    event X402StatusUpdated(bool enabled);
+    event X402PaymentVerified(bytes32 indexed requestId, address indexed user);
+    event X402PaymentRequested(bytes32 indexed requestId, address indexed user, uint256 price);
 
     // ============ Constructor ============
 
@@ -128,6 +147,68 @@ contract SavannaFunctionsConsumer is FunctionsClient, Ownable {
         );
 
         // Track pending request
+        pendingRequests[requestId] = user;
+        requestTimeHorizons[requestId] = timeHorizon;
+        totalRequestsSent++;
+
+        emit AIRequestSent(requestId, user, timeHorizon);
+    }
+
+    // forge-lint: disable-next-line(mixed-case-function) — AI is an acronym, not mixed case
+    function requestAIStrategyWithPayment(address user, uint256 timeHorizon)
+        external
+        returns (bytes32 prelimId)
+    {
+        if (!x402Enabled) revert Errors.Savanna__X402PaymentRequired();
+        if (msg.sender != vault && msg.sender != owner()) {
+            revert Errors.Savanna__Unauthorized();
+        }
+        if (!ISavannaVault(vault).hasActiveRequest(user)) {
+            revert Errors.Savanna__NoActiveRequest();
+        }
+
+        prelimId = keccak256(abi.encode(user, timeHorizon, block.number));
+        x402PrePaid[prelimId] = false;
+        x402PrePayUser[prelimId] = user;
+        x402PrePayTimeHorizon[prelimId] = timeHorizon;
+
+        emit X402PaymentRequested(prelimId, user, x402PricePerRequest);
+    }
+
+    function confirmAndSendRequest(bytes32 prelimId) external onlyOwner {
+        if (x402PrePayUser[prelimId] == address(0)) revert Errors.Savanna__X402PaymentNotConfirmed();
+        if (x402PrePaid[prelimId]) revert Errors.Savanna__X402PaymentNotConfirmed();
+
+        x402PrePaid[prelimId] = true;
+
+        emit X402PaymentVerified(prelimId, x402PrePayUser[prelimId]);
+    }
+
+    function sendPaidRequest(bytes32 prelimId) external onlyOwner {
+        if (!x402PrePaid[prelimId]) revert Errors.Savanna__X402PaymentNotConfirmed();
+
+        address user = x402PrePayUser[prelimId];
+        uint256 timeHorizon = x402PrePayTimeHorizon[prelimId];
+
+        delete x402PrePayUser[prelimId];
+        delete x402PrePayTimeHorizon[prelimId];
+        delete x402PrePaid[prelimId];
+
+        FunctionsRequest.Request memory req;
+        req.initializeRequestForInlineJavaScript(sourceCode);
+
+        string[] memory args = new string[](2);
+        args[0] = _addressToString(user);
+        args[1] = _uintToString(timeHorizon);
+        req.setArgs(args);
+
+        bytes32 requestId = _sendRequest(
+            req.encodeCBOR(),
+            subscriptionId,
+            callbackGasLimit,
+            donId
+        );
+
         pendingRequests[requestId] = user;
         requestTimeHorizons[requestId] = timeHorizon;
         totalRequestsSent++;
@@ -231,6 +312,33 @@ contract SavannaFunctionsConsumer is FunctionsClient, Ownable {
         emit CallbackGasLimitUpdated(oldLimit, newLimit);
     }
 
+    /// @notice Set the x402 payment endpoint URL
+    function setX402Endpoint(string calldata endpoint) external onlyOwner {
+        string memory old = x402Endpoint;
+        x402Endpoint = endpoint;
+        emit X402EndpointUpdated(old, endpoint);
+    }
+
+    /// @notice Set x402 price per AI request (in USDC base units, 6 decimals)
+    function setX402PricePerRequest(uint256 price) external onlyOwner {
+        uint256 oldPrice = x402PricePerRequest;
+        x402PricePerRequest = price;
+        emit X402PriceUpdated(oldPrice, price);
+    }
+
+    /// @notice Enable or disable x402 payment requirement
+    function setX402Enabled(bool enabled) external onlyOwner {
+        x402Enabled = enabled;
+        emit X402StatusUpdated(enabled);
+    }
+
+    /// @notice Verify x402 payment for a request (called by off-chain monitor after payment confirmed)
+    function verifyX402Payment(bytes32 requestId) external onlyOwner {
+        if (pendingRequests[requestId] == address(0)) revert Errors.Savanna__NoActiveRequest();
+        x402PaymentVerified[requestId] = true;
+        emit X402PaymentVerified(requestId, pendingRequests[requestId]);
+    }
+
     // ============ View ============
 
     /// @notice Get pending request info
@@ -269,6 +377,8 @@ contract SavannaFunctionsConsumer is FunctionsClient, Ownable {
         bytes memory buffer = new bytes(digits);
         while (value != 0) {
             digits -= 1;
+            // casting to 'uint8' is safe because value % 10 is always 0-9, so 48 + (0-9) = 48-57 fits in uint8
+            // forge-lint: disable-next-line(unsafe-typecast)
             buffer[digits] = bytes1(uint8(48 + uint256(value % 10)));
             value /= 10;
         }
@@ -279,7 +389,9 @@ contract SavannaFunctionsConsumer is FunctionsClient, Ownable {
     function _getRevertReason(bytes memory reason) internal pure returns (string memory) {
         if (reason.length < 68) return "Unknown error";
         // Skip 4-byte selector + 32-byte offset + 32-byte length
-        uint256 len = uint256(bytes32(reason) >> 128); // Upper 16 bytes of 3rd word = length
+        // casting to 'bytes32' is safe because we're reading 32 bytes from memory, then shifting to extract length
+        // forge-lint: disable-next-line(unsafe-typecast)
+        uint256 len = uint256(bytes32(reason) >> 128);
         if (reason.length < 68 + len) return "Unknown error";
         bytes memory reasonBytes = new bytes(len);
         for (uint256 i = 0; i < len; i++) {

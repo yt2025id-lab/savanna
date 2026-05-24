@@ -50,6 +50,16 @@ export const SAVANNA_VAULT_ABI = [
   "event YieldEarned(address indexed user, int256 yieldAmount, uint256 returnedAmount, uint256 allocatedAmount)",
   "event RebalanceTriggered(uint256 indexed timestamp, uint256 positionsProcessed)",
   "event OracleUpdated(address indexed oldOracle, address indexed newOracle)",
+  // MiniPay
+  "function minipayMinDeposit() external view returns (uint256)",
+  "function isMinipayWallet(address user) external view returns (bool)",
+  "function totalMinipayDeposits() external view returns (uint256)",
+  "function minipayDepositCount() external view returns (uint256)",
+  "function minipayDeposit(uint256 assets, address receiver) external returns (uint256 shares)",
+  "function setMinipayWallet(address user, bool status) external",
+  "event MinipayDeposit(address indexed user, uint256 amount, uint256 shares)",
+  "event MinipayWalletRegistered(address indexed user, bool status)",
+  "event MinipayMinDepositUpdated(uint256 oldMinDeposit, uint256 newMinDeposit)",
 ] as const;
 
 export const SAVANNA_CONTROLLER_ABI = [
@@ -71,6 +81,31 @@ export const SAVANNA_CONTROLLER_ABI = [
   "event StrategyExecuted(address indexed user, address strategy, uint256 amount)",
   "event UserWithdrawn(address indexed user, uint256 amount)",
   "event ForwarderUpdated(address indexed oldForwarder, address indexed newForwarder)",
+] as const;
+
+export const SAVANNA_FUNCTIONS_CONSUMER_ABI = [
+  "function controller() external view returns (address)",
+  "function vault() external view returns (address)",
+  "function subscriptionId() external view returns (uint64)",
+  "function donId() external view returns (bytes32)",
+  "function sourceCode() external view returns (string)",
+  "function x402Endpoint() external view returns (string)",
+  "function x402PricePerRequest() external view returns (uint256)",
+  "function x402Enabled() external view returns (bool)",
+  "function totalRequestsSent() external view returns (uint256)",
+  "function totalResponsesReceived() external view returns (uint256)",
+  "function requestAIStrategy(address user, uint256 timeHorizon) external returns (bytes32 requestId)",
+  "function verifyX402Payment(bytes32 requestId) external",
+  "function setX402Endpoint(string calldata endpoint) external",
+  "function setX402PricePerRequest(uint256 price) external",
+  "function setX402Enabled(bool enabled) external",
+  "event AIRequestSent(bytes32 indexed requestId, address indexed user, uint256 timeHorizon)",
+  "event AIResponseReceived(bytes32 indexed requestId, address indexed user, uint8 protocol, uint256 allocationBps, uint256 expectedApy, uint8 riskScore)",
+  "event AIRequestFailed(bytes32 indexed requestId, string reason)",
+  "event X402EndpointUpdated(string oldEndpoint, string newEndpoint)",
+  "event X402PriceUpdated(uint256 oldPrice, uint256 newPrice)",
+  "event X402StatusUpdated(bool enabled)",
+  "event X402PaymentVerified(bytes32 indexed requestId, address indexed user)",
 ] as const;
 
 export const SAVANNA_ORACLE_ABI = [

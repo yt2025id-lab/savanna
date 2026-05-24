@@ -81,6 +81,13 @@ library Errors {
     /// @notice Swap to vault asset failed
     error Savanna__SwapFailed(bytes reason);
 
+    // ============ X402 Payment Errors ============
+
+    /// @notice x402 payment is required but not enabled
+    error Savanna__X402PaymentRequired();
+    /// @notice x402 payment has not been confirmed for the request
+    error Savanna__X402PaymentNotConfirmed();
+
     // ============ Admin Errors ============
 
     /// @notice Caller is not the owner

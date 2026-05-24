@@ -4,6 +4,7 @@ pragma solidity ^0.8.28;
 import {ERC4626} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/interfaces/IERC20Metadata.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
@@ -47,6 +48,16 @@ contract SavannaVault is ERC4626, Ownable, ISavannaVault, ReentrancyGuard, Pausa
     uint256 public totalPositions;
     /// @notice Cumulative yield earned across all completed strategies (in asset units)
     uint256 public totalYieldEarned;
+    /// @notice Minimum deposit amount (10 units in asset decimals)
+    uint256 public minDeposit;
+    /// @notice Reduced minimum deposit for MiniPay wallet users (1 unit in asset decimals)
+    uint256 public minipayMinDeposit;
+    /// @notice MiniPay wallet registry (addresses registered via off-chain MiniPay detection)
+    mapping(address => bool) public isMinipayWallet;
+    /// @notice Total deposits from MiniPay wallets
+    uint256 public totalMinipayDeposits;
+    /// @notice Count of MiniPay wallet deposits
+    uint256 public minipayDepositCount;
 
     // ============ Automation State ============
 
@@ -63,6 +74,7 @@ contract SavannaVault is ERC4626, Ownable, ISavannaVault, ReentrancyGuard, Pausa
     event RebalanceIntervalUpdated(uint256 oldInterval, uint256 newInterval);
     event OracleUpdated(address indexed oldOracle, address indexed newOracle);
     event YieldEarned(address indexed user, int256 yieldAmount, uint256 returnedAmount, uint256 allocatedAmount);
+    event MinipayMinDepositUpdated(uint256 oldMinDeposit, uint256 newMinDeposit);
 
     // ============ Constructor ============
 
@@ -74,6 +86,8 @@ contract SavannaVault is ERC4626, Ownable, ISavannaVault, ReentrancyGuard, Pausa
         if (oracle_ == address(0)) revert Errors.Savanna__ZeroAddress();
         oracle = SavannaOracle(oracle_);
         lastRebalance = block.timestamp;
+        minDeposit = 10 * (10 ** IERC20Metadata(asset()).decimals());
+        minipayMinDeposit = 1 * (10 ** IERC20Metadata(asset()).decimals());
     }
 
     // ============ Admin ============
@@ -120,6 +134,41 @@ contract SavannaVault is ERC4626, Ownable, ISavannaVault, ReentrancyGuard, Pausa
         emit RebalanceIntervalUpdated(oldInterval, interval);
     }
 
+    /// @notice Update the minimum deposit amount
+    /// @param newMinDeposit New minimum deposit in asset units
+    function setMinDeposit(uint256 newMinDeposit) external onlyOwner {
+        if (newMinDeposit == 0) revert Errors.Savanna__InvalidParameter("minDeposit zero");
+        minDeposit = newMinDeposit;
+    }
+
+    /// @notice Update the MiniPay reduced minimum deposit amount
+    /// @param newMinDeposit New minimum deposit for MiniPay users in asset units
+    function setMinipayMinDeposit(uint256 newMinDeposit) external onlyOwner {
+        if (newMinDeposit == 0) revert Errors.Savanna__InvalidParameter("minipayMinDeposit zero");
+        uint256 oldMin = minipayMinDeposit;
+        minipayMinDeposit = newMinDeposit;
+        emit MinipayMinDepositUpdated(oldMin, newMinDeposit);
+    }
+
+    /// @notice Register or deregister a MiniPay wallet (called by off-chain verifier or owner)
+    /// @param user The wallet address
+    /// @param status Whether the wallet is a MiniPay wallet
+    function setMinipayWallet(address user, bool status) external onlyOwner {
+        isMinipayWallet[user] = status;
+        emit MinipayWalletRegistered(user, status);
+    }
+
+    /// @notice Batch register MiniPay wallets
+    /// @param users Array of wallet addresses
+    /// @param statuses Array of status booleans
+    function setMinipayWallets(address[] calldata users, bool[] calldata statuses) external onlyOwner {
+        if (users.length != statuses.length) revert Errors.Savanna__InvalidParameter("array length mismatch");
+        for (uint256 i = 0; i < users.length; i++) {
+            isMinipayWallet[users[i]] = statuses[i];
+            emit MinipayWalletRegistered(users[i], statuses[i]);
+        }
+    }
+
     // ============ ERC-4626 Overrides ============
 
     /// @notice Offset for inflation attack prevention (cUSD has 18 decimals, USDC has 6)
@@ -135,15 +184,38 @@ contract SavannaVault is ERC4626, Ownable, ISavannaVault, ReentrancyGuard, Pausa
         whenNotPaused
         returns (uint256 shares)
     {
-        if (assets < Constants.MIN_DEPOSIT) {
-            revert Errors.Savanna__InsufficientDeposit(assets, Constants.MIN_DEPOSIT);
+        if (assets < minDeposit) {
+            revert Errors.Savanna__InsufficientDeposit(assets, minDeposit);
         }
 
         shares = super.deposit(assets, receiver);
         emit Deposited(receiver, assets, shares);
     }
 
-    /// @notice Deposit from cross-chain bridge receiver (LI.FI)
+    /// @notice Deposit with MiniPay reduced minimum (for detected MiniPay wallet users)
+    /// @param assets Amount of vault asset to deposit
+    /// @param receiver Address to receive shares
+    /// @return shares Number of svYLD shares minted
+    function minipayDeposit(uint256 assets, address receiver)
+        public
+        override
+        nonReentrant
+        whenNotPaused
+        returns (uint256 shares)
+    {
+        if (!isMinipayWallet[receiver] && !isMinipayWallet[msg.sender]) {
+            revert Errors.Savanna__Unauthorized();
+        }
+        if (assets < minipayMinDeposit) {
+            revert Errors.Savanna__InsufficientDeposit(assets, minipayMinDeposit);
+        }
+
+        shares = super.deposit(assets, receiver);
+        totalMinipayDeposits += assets;
+        minipayDepositCount++;
+        emit Deposited(receiver, assets, shares);
+        emit MinipayDeposit(receiver, assets, shares);
+    }
     /// @dev Called by the authorized CrossChainReceiver after bridging
     /// @param assets Amount of vault asset to deposit
     /// @param receiver Address to receive shares (original depositor on source chain)
@@ -158,8 +230,8 @@ contract SavannaVault is ERC4626, Ownable, ISavannaVault, ReentrancyGuard, Pausa
     ) external nonReentrant whenNotPaused returns (uint256 shares) {
         if (crossChainReceiver == address(0)) revert Errors.Savanna__OnlyBridgeReceiver();
         if (msg.sender != crossChainReceiver) revert Errors.Savanna__OnlyBridgeReceiver();
-        if (assets < Constants.MIN_DEPOSIT) {
-            revert Errors.Savanna__InsufficientDeposit(assets, Constants.MIN_DEPOSIT);
+        if (assets < minDeposit) {
+            revert Errors.Savanna__InsufficientDeposit(assets, minDeposit);
         }
 
         shares = super.deposit(assets, receiver);
@@ -183,6 +255,7 @@ contract SavannaVault is ERC4626, Ownable, ISavannaVault, ReentrancyGuard, Pausa
         public
         override
         nonReentrant
+        whenNotPaused
         returns (uint256 shares)
     {
         // Check if user has active position
@@ -226,8 +299,8 @@ contract SavannaVault is ERC4626, Ownable, ISavannaVault, ReentrancyGuard, Pausa
         }
 
         uint256 userBalance = convertToAssets(balanceOf(msg.sender));
-        if (userBalance < Constants.MIN_DEPOSIT) {
-            revert Errors.Savanna__InsufficientDeposit(userBalance, Constants.MIN_DEPOSIT);
+        if (userBalance < minDeposit) {
+            revert Errors.Savanna__InsufficientDeposit(userBalance, minDeposit);
         }
 
         _activeRequests[msg.sender] = true;
@@ -314,8 +387,11 @@ contract SavannaVault is ERC4626, Ownable, ISavannaVault, ReentrancyGuard, Pausa
             emit YieldEarned(user, int256(yieldEarned), returnedAmount, allocated);
         } else if (returnedAmount < allocated) {
             uint256 loss = allocated - returnedAmount;
-            // Loss reduces totalYieldEarned (can go negative in accounting, but uint can't)
-            // We emit the event for off-chain tracking
+            if (totalYieldEarned >= loss) {
+                totalYieldEarned -= loss;
+            } else {
+                totalYieldEarned = 0;
+            }
             // forge-lint: disable-next-line(unsafe-typecast)
             emit YieldEarned(user, -int256(loss), returnedAmount, allocated);
         } else {

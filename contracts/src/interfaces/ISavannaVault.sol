@@ -40,6 +40,12 @@ interface ISavannaVault {
         uint256 shares
     );
 
+    /// @notice Emitted when a MiniPay wallet deposits with reduced minimum
+    event MinipayDeposit(address indexed user, uint256 amount, uint256 shares);
+
+    /// @notice Emitted when a MiniPay wallet is registered or deregistered
+    event MinipayWalletRegistered(address indexed user, bool status);
+
     // ============ User Actions ============
 
     /// @notice Request AI-powered yield optimization for deposited funds
@@ -75,4 +81,10 @@ interface ISavannaVault {
 
     /// @notice Get cross-chain deposit record
     function getCrossChainDeposit(uint256 index) external view returns (DataTypes.CrossChainDeposit memory);
+
+    /// @notice Check if address is registered as MiniPay wallet
+    function isMinipayWallet(address user) external view returns (bool);
+
+    /// @notice Deposit with MiniPay reduced minimum
+    function minipayDeposit(uint256 assets, address receiver) external returns (uint256 shares);
 }

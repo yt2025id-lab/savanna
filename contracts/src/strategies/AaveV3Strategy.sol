@@ -40,6 +40,8 @@ contract AaveV3Strategy is BaseStrategy {
 
     /// @notice Aave V3 Pool address on Celo
     address public immutable AAVE_POOL;
+    /// @notice Aave V3 aToken address for the supplied asset
+    address public immutable AAVE_ATOKEN;
     /// @notice Aave referral code (0 = no referral)
     uint16 public constant REFERRAL_CODE = 0;
 
@@ -49,9 +51,12 @@ contract AaveV3Strategy is BaseStrategy {
         address asset_,
         address vault_,
         address owner_,
-        address aavePool_
+        address aavePool_,
+        address aaveAToken_
     ) BaseStrategy(asset_, vault_, owner_) {
+        if (aaveAToken_ == address(0)) revert Errors.Savanna__ZeroAddress();
         AAVE_POOL = aavePool_;
+        AAVE_ATOKEN = aaveAToken_;
     }
 
     // ============ Strategy Info ============
@@ -93,16 +98,9 @@ contract AaveV3Strategy is BaseStrategy {
         }
     }
 
-    function _getProtocolBalance(address asset) internal view override returns (uint256) {
-        // Return balance of underlying asset held by this strategy
-        // In Aave V3, after supply(), aTokens are minted to this contract
-        // The aToken address maps 1:1 with the supplied asset
-        // For accurate accounting, query aToken balance, not the asset itself
-        // Since aToken addresses aren't stored, we use asset balance as a safe proxy
-        // when funds haven't been supplied yet, and trust Aave's accounting after supply
-        uint256 assetBalance = IERC20(asset).balanceOf(address(this));
-        // If we have aTokens, the asset balance will be 0 (funds are in Aave)
-        // Return at minimum the asset balance (for idle funds still in this contract)
-        return assetBalance;
+    function _getProtocolBalance(address) internal view override returns (uint256) {
+        uint256 aTokenBalance = IAaveV3Token(AAVE_ATOKEN).balanceOf(address(this));
+        uint256 idleBalance = IERC20(ASSET).balanceOf(address(this));
+        return aTokenBalance + idleBalance;
     }
 }

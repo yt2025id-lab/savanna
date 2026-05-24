@@ -85,11 +85,18 @@ contract MentoSavingsStrategy is BaseStrategy {
     }
 
     function _withdrawFromProtocol(address asset, uint256 amount) internal override returns (uint256 withdrawn) {
-        // Mento Savings uses ERC-4626 withdraw: withdraw(assets, receiver, owner)
         try IMentoSavingsToken(MENTO_SAVINGS_TOKEN).withdraw(amount, address(this), address(this)) returns (uint256) {
-            withdrawn = amount; // ERC-4626 guarantees exact asset withdrawal if sufficient
-        } catch (bytes memory reason) {
-            revert Errors.Savanna__StrategyWithdrawFailed(reason);
+            withdrawn = amount;
+        } catch {
+            uint256 shares = IMentoSavingsToken(MENTO_SAVINGS_TOKEN).balanceOf(address(this));
+            if (shares == 0) revert Errors.Savanna__StrategyWithdrawFailed("Mento: circuit breaker, no shares");
+            uint256 maxAssets = IMentoSavingsToken(MENTO_SAVINGS_TOKEN).convertToAssets(shares);
+            uint256 withdrawAmount = amount > maxAssets ? maxAssets : amount;
+            try IMentoSavingsToken(MENTO_SAVINGS_TOKEN).withdraw(withdrawAmount, address(this), address(this)) returns (uint256) {
+                withdrawn = withdrawAmount;
+            } catch (bytes memory reason) {
+                revert Errors.Savanna__StrategyWithdrawFailed(reason);
+            }
         }
     }
 

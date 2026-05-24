@@ -147,3 +147,85 @@ export const MINIPAY_APP_META = {
   icon: "/icon-192.png",
   category: "finance",
 } as const;
+
+// ─── x402 Payment Integration ──────────────────────────────────────────────
+
+/** x402 payment configuration for AI strategy endpoint */
+export const X402_CONFIG = {
+  endpoint: process.env.NEXT_PUBLIC_X402_ENDPOINT || "https://savanna-x402.onrender.com/api/strategy/analyze",
+  price: process.env.NEXT_PUBLIC_X402_PRICE || "100000",
+  currency: "0xcebA9300f2b948710d2653dD7B07f33A8B32118C" as `0x${string}`,
+  chainId: 42220,
+  feeCurrency: "0x2F25deB3848C207fc8E0c34035B3Ba7fC157602B" as `0x${string}`,
+} as const;
+
+/**
+ * Build x402 payment header value for a strategy request.
+ * Called by the off-chain AI monitor after verifying the user's stablecoin payment.
+ */
+export function buildX402PaymentHeader(params: {
+  payer: string;
+  amount: string;
+  currency: string;
+  signature: string;
+  txHash: string;
+}): string {
+  return [
+    `payer=${params.payer}`,
+    `amount=${params.amount}`,
+    `currency=${params.currency}`,
+    `signature=${params.signature}`,
+    `txHash=${params.txHash}`,
+  ].join(",");
+}
+
+/**
+ * Check if a 402 response contains x402 payment requirements
+ */
+export function parseX402Requirement(body: any): {
+  price: string;
+  currency: string;
+  chainId: number;
+  scheme: string;
+} | null {
+  if (!body || body.error !== "Payment Required") return null;
+  return {
+    price: body.price,
+    currency: body.currency,
+    chainId: body.chainId,
+    scheme: body.scheme,
+  };
+}
+
+// ─── MiniPay + x402 Combined Flow ──────────────────────────────────────────
+
+/**
+ * Get the MiniPay deposit deep link for the Savanna vault.
+ * Redirects MiniPay users with low balance to top up.
+ */
+export function getMinipayAddCashLink(tokens: string[] = ["USDm", "USDC"]): string {
+  const tokenList = tokens.join(",");
+  return `https://link.minipay.xyz/add_cash?tokens=${tokenList}`;
+}
+
+/**
+ * Get the MiniPay receipt deep link for a transaction.
+ */
+export function getMinipayReceiptLink(txHash: string): string {
+  return `https://link.minipay.xyz/receipt?tx=${txHash}&celebrate`;
+}
+
+/**
+ * Get MiniPay deposit minimums.
+ * MiniPay users get 1/5 of the standard minimum deposit.
+ */
+export function getMinipayDepositMin(decimals: number): {
+  standard: bigint;
+  minipay: bigint;
+} {
+  const unit = 10n ** BigInt(decimals);
+  return {
+    standard: 10n * unit,
+    minipay: 1n * unit,
+  };
+}

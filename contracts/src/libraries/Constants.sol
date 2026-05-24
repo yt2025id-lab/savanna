@@ -58,6 +58,26 @@ library Constants {
     /// @notice Bridge fee buffer in basis points (0.5%)
     uint256 public constant BRIDGE_FEE_BUFFER_BPS = 50;
 
+    // ============ MiniPay ============
+
+    /// @notice MiniPay reduced deposit multiplier (1/5 of standard minimum)
+    uint256 public constant MINIPAY_DEPOSIT_DIVISOR = 5;
+    /// @notice MiniPay supported stablecoins on Celo (USDm/cUSD)
+    address public constant MINIPAY_USDM = 0x765DE816845861e75A25fCA122bb6898B8B1282a;
+    /// @notice MiniPay USDC on Celo
+    address public constant MINIPAY_USDC = 0xcebA9300f2b948710d2653dD7B07f33A8B32118C;
+    /// @notice MiniPay USDT on Celo
+    address public constant MINIPAY_USDT = 0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e;
+    /// @notice USDC fee currency adapter (for fee abstraction)
+    address public constant USDC_FEE_ADAPTER = 0x2F25deB3848C207fc8E0c34035B3Ba7fC157602B;
+    /// @notice USDT fee currency adapter (for fee abstraction)
+    address public constant USDT_FEE_ADAPTER = 0x0E2A3e05bc9A16F5292A6170456A710cb89C6f72;
+
+    // ============ x402 ============
+
+    /// @notice Default x402 price per AI strategy request (0.10 USDC in 6 decimals)
+    uint256 public constant X402_DEFAULT_PRICE = 100000;
+
     // ============ Role IDs (for future access control upgrade) ============
 
     bytes32 public constant DEFAULT_ADMIN_ROLE = 0x00;

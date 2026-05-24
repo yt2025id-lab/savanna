@@ -336,4 +336,153 @@ contract SavannaFunctionsConsumerTest is Test {
         assertEq(alicePos.activeStrategy, address(aaveStrategy));
         assertEq(bobPos.activeStrategy, address(reserveStrategy));
     }
+
+    // ============ x402 Payment Flow ============
+
+    function test_x402_requestWithPayment_revertNotEnabled() public {
+        vm.startPrank(alice);
+        usdc.approve(address(vault), 1000e6);
+        vault.deposit(1000e6, alice);
+        vault.requestStrategy(30 days);
+        vm.stopPrank();
+
+        vm.prank(owner);
+        vm.expectRevert(Errors.Savanna__X402PaymentRequired.selector);
+        consumer.requestAIStrategyWithPayment(alice, 30 days);
+    }
+
+    function test_x402_requestWithPayment_success() public {
+        vm.startPrank(owner);
+        consumer.setX402Enabled(true);
+        consumer.setX402PricePerRequest(100000); // 0.10 USDC
+        consumer.setX402Endpoint("http://localhost:4021/strategy-analysis");
+        vm.stopPrank();
+
+        vm.startPrank(alice);
+        usdc.approve(address(vault), 1000e6);
+        vault.deposit(1000e6, alice);
+        vault.requestStrategy(30 days);
+        vm.stopPrank();
+
+        vm.prank(owner);
+        bytes32 prelimId = consumer.requestAIStrategyWithPayment(alice, 30 days);
+
+        assertFalse(consumer.x402PrePaid(prelimId));
+        assertEq(consumer.x402PrePayUser(prelimId), alice);
+        assertEq(consumer.x402PrePayTimeHorizon(prelimId), 30 days);
+    }
+
+    function test_x402_confirmAndSendRequest_marksPaidBeforeDONSend() public {
+        vm.startPrank(owner);
+        consumer.setX402Enabled(true);
+        consumer.setX402PricePerRequest(100000);
+        consumer.setX402Endpoint("http://localhost:4021/strategy-analysis");
+        vm.stopPrank();
+
+        vm.startPrank(alice);
+        usdc.approve(address(vault), 1000e6);
+        vault.deposit(1000e6, alice);
+        vault.requestStrategy(30 days);
+        vm.stopPrank();
+
+        vm.prank(owner);
+        bytes32 prelimId = consumer.requestAIStrategyWithPayment(alice, 30 days);
+
+        assertFalse(consumer.x402PrePaid(prelimId));
+
+        vm.prank(owner);
+        consumer.confirmAndSendRequest(prelimId);
+
+        assertTrue(consumer.x402PrePaid(prelimId));
+    }
+
+    function test_x402_confirmAndSendRequest_revertAlreadyConfirmed() public {
+        vm.startPrank(owner);
+        consumer.setX402Enabled(true);
+        consumer.setX402PricePerRequest(100000);
+        vm.stopPrank();
+
+        vm.startPrank(alice);
+        usdc.approve(address(vault), 1000e6);
+        vault.deposit(1000e6, alice);
+        vault.requestStrategy(30 days);
+        vm.stopPrank();
+
+        vm.startPrank(owner);
+        bytes32 prelimId = consumer.requestAIStrategyWithPayment(alice, 30 days);
+
+        consumer.confirmAndSendRequest(prelimId);
+
+        vm.expectRevert(Errors.Savanna__X402PaymentNotConfirmed.selector);
+        consumer.confirmAndSendRequest(prelimId);
+        vm.stopPrank();
+    }
+
+    function test_x402_confirmAndSendRequest_revertNotFound() public {
+        bytes32 fakePrelimId = keccak256("fake");
+        vm.prank(owner);
+        vm.expectRevert(Errors.Savanna__X402PaymentNotConfirmed.selector);
+        consumer.confirmAndSendRequest(fakePrelimId);
+    }
+
+    function test_x402_setEndpoint() public {
+        vm.prank(owner);
+        consumer.setX402Endpoint("https://api.savanna.finance/x402");
+        assertEq(consumer.x402Endpoint(), "https://api.savanna.finance/x402");
+    }
+
+    function test_x402_setPricePerRequest() public {
+        vm.prank(owner);
+        consumer.setX402PricePerRequest(250000);
+        assertEq(consumer.x402PricePerRequest(), 250000);
+    }
+
+    function test_x402_setEnabled() public {
+        vm.prank(owner);
+        consumer.setX402Enabled(true);
+        assertTrue(consumer.x402Enabled());
+        vm.prank(owner);
+        consumer.setX402Enabled(false);
+        assertFalse(consumer.x402Enabled());
+    }
+
+    // ============ MiniPay Deposit ============
+
+    function test_minipayDeposit_revertNotRegistered() public {
+        vm.startPrank(alice);
+        usdc.approve(address(vault), 1000e6);
+        vm.expectRevert(Errors.Savanna__Unauthorized.selector);
+        vault.minipayDeposit(1e6, alice);
+        vm.stopPrank();
+    }
+
+    function test_minipayDeposit_success() public {
+        vm.prank(owner);
+        vault.setMinipayWallet(alice, true);
+
+        vm.startPrank(alice);
+        usdc.approve(address(vault), 1e6);
+        uint256 shares = vault.minipayDeposit(1e6, alice);
+        assertGt(shares, 0);
+        vm.stopPrank();
+
+        assertTrue(vault.isMinipayWallet(alice));
+        assertEq(vault.totalMinipayDeposits(), 1e6);
+        assertEq(vault.minipayDepositCount(), 1);
+    }
+
+    function test_minipayBatchRegister() public {
+        address[] memory users = new address[](2);
+        users[0] = alice;
+        users[1] = bob;
+        bool[] memory statuses = new bool[](2);
+        statuses[0] = true;
+        statuses[1] = true;
+
+        vm.prank(owner);
+        vault.setMinipayWallets(users, statuses);
+
+        assertTrue(vault.isMinipayWallet(alice));
+        assertTrue(vault.isMinipayWallet(bob));
+    }
 }
