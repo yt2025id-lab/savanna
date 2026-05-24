@@ -10,7 +10,15 @@
     "feedConsumer": "0x5B9f5553A802514f358ef61c56742a0B831C6614",
     "crossChainReceiver": "0x3fD3a166F5aCcbe578777ed47c2651598aC152db",
     "aaveStrategy": "0xcBceC5a5C17797C601b1f747a3977423397C904e",
-    "reserveStrategy": "0xFF8433711aBD603b3c9A07cfa51A4b157Ec300e9"
+    "reserveStrategy": "0xFF8433711aBD603b3c9A07cfa51A4b157Ec300e9",
+    "functionsConsumer": "0xb87Baf2131871fDA5c631873618647bEbB87e367"
   },
-  "deployedAt": "2025-05-22"
+  "chainlinkFunctions": {
+    "router": "0xA9d587a00A31A52Ed70D6026794a8FC5E2F5dCb0",
+    "donId": "fun-celo-alfajores-1",
+    "subscriptionId": 0,
+    "note": "Set subscriptionId after creating at https://functions.chain.link"
+  },
+  "deployedAt": "2025-05-22",
+  "functionsConsumerDeployedAt": "2026-05-23"
 }

@@ -6,12 +6,12 @@ pragma solidity ^0.8.28;
 library DataTypes {
     // ============ Enums ============
 
-    /// @notice Supported lending protocols on Celo
+    /// @notice Supported yield protocols on Celo
     enum Protocol {
-        AaveV3,      // 0 - Aave V3 on Celo
-        Moola,       // 1 - Moola (native Celo lending)
-        CompoundV3,  // 2 - Compound V3 on Celo
-        Reserve      // 3 - Idle reserve strategy (fallback)
+        AaveV3,          // 0 - Aave V3 on Celo (lending)
+        Moola,           // 1 - Moola (native Celo lending)
+        MentoSavings,    // 2 - Mento Savings (ERC-4626 savings vault)
+        Reserve          // 3 - Idle reserve strategy (fallback)
     }
 
     // ============ Structs ============

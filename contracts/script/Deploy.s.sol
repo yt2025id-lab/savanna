@@ -12,6 +12,7 @@ import {SavannaController} from "../src/controller/SavannaController.sol";
 import {SavannaFeedConsumer} from "../src/feeds/SavannaFeedConsumer.sol";
 import {SavannaCrossChainReceiver} from "../src/crosschain/SavannaCrossChainReceiver.sol";
 import {AaveV3Strategy} from "../src/strategies/AaveV3Strategy.sol";
+import {MentoSavingsStrategy} from "../src/strategies/MentoSavingsStrategy.sol";
 import {ReserveStrategy} from "../src/strategies/ReserveStrategy.sol";
 import {DataTypes} from "../src/libraries/DataTypes.sol";
 
@@ -31,6 +32,10 @@ contract Deploy is Script {
     address constant MAINNET_USDC = 0xcebA9300f2b948710d2653dD7B07f33A8B32118C;
     /// @notice USDm on Celo Mainnet (18 decimals) — Mento
     address constant MAINNET_USDM = 0x765DE816845861e75A25fCA122bb6898B8B1282a;
+    /// @notice Mento Savings cUSD (sCU) on Celo Mainnet
+    address constant MAINNET_MENTO_SAVINGS_CU = 0x2a4D787EB7e7306Ef8Bb5143C6295C5731d1B4F4;
+    /// @notice cUSD on Celo Mainnet (18 decimals) — Mento stablecoin
+    address constant MAINNET_CUSD = 0x765DE816845861e75a25fCA1227689Ab8A8B1f84;
 
     // ============ Chain IDs ============
 
@@ -46,7 +51,7 @@ contract Deploy is Script {
         address crossChainReceiver;
         address aaveStrategy;
         address moolaStrategy;
-        address compoundStrategy;
+        address mentoSavingsStrategy;
         address reserveStrategy;
     }
 
@@ -121,10 +126,30 @@ contract Deploy is Script {
         console2.log("5. AaveV3Strategy:", deployed.aaveStrategy);
 
         // Moola, Compound not available on Celo per celopedia-skills review
+        // Deploy MentoSavingsStrategy for cUSD savings yield
+        address mentoSavingsToken = isMainnet
+            ? MAINNET_MENTO_SAVINGS_CU
+            : address(0); // No Mento Savings on Sepolia yet
+
+        MentoSavingsStrategy mentoSavingsStrategy;
+        if (isMainnet) {
+            mentoSavingsStrategy = new MentoSavingsStrategy(
+                MAINNET_CUSD, // cUSD as asset
+                deployed.vault,
+                deployer,
+                mentoSavingsToken
+            );
+            deployed.mentoSavingsStrategy = address(mentoSavingsStrategy);
+            console2.log("6. MentoSavingsStrategy:", deployed.mentoSavingsStrategy);
+        } else {
+            deployed.mentoSavingsStrategy = address(0);
+            console2.log("6. MentoSavingsStrategy: skipped (not on testnet)");
+        }
+
         // Using ReserveStrategy as fallback alongside Aave
         ReserveStrategy reserveStrategy = new ReserveStrategy(asset, deployed.vault, deployer);
         deployed.reserveStrategy = address(reserveStrategy);
-        console2.log("6. ReserveStrategy:", deployed.reserveStrategy);
+        console2.log("7. ReserveStrategy:", deployed.reserveStrategy);
 
         // ============ 6. Deploy Controller ============
 
@@ -141,13 +166,19 @@ contract Deploy is Script {
         vault.setController(deployed.controller);
         console2.log("=> Vault controller set");
 
-        // Register strategies on controller (only Aave + Reserve available on Celo)
+        // Register strategies on controller (AaveV3 + MentoSavings + Reserve on Celo)
         controller.setStrategy(DataTypes.Protocol.AaveV3, deployed.aaveStrategy);
+        if (deployed.mentoSavingsStrategy != address(0)) {
+            controller.setStrategy(DataTypes.Protocol.MentoSavings, deployed.mentoSavingsStrategy);
+        }
         controller.setStrategy(DataTypes.Protocol.Reserve, deployed.reserveStrategy);
-        console2.log("=> Strategies registered (AaveV3, Reserve)");
+        console2.log("=> Strategies registered (AaveV3, MentoSavings, Reserve)");
 
         // Set controller on strategies
         aaveStrategy.setController(deployed.controller);
+        if (deployed.mentoSavingsStrategy != address(0)) {
+            mentoSavingsStrategy.setController(deployed.controller);
+        }
         reserveStrategy.setController(deployed.controller);
         console2.log("=> Controller set on strategies");
 
@@ -195,6 +226,7 @@ contract Deploy is Script {
         console2.log("FeedConsumer:", deployed.feedConsumer);
         console2.log("CrossChainReceiver:", deployed.crossChainReceiver);
         console2.log("AaveV3:", deployed.aaveStrategy);
+        console2.log("MentoSavings:", deployed.mentoSavingsStrategy);
         console2.log("Reserve:", deployed.reserveStrategy);
 
         deployed.asset = asset;
