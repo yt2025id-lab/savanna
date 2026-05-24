@@ -21,24 +21,24 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Savanna Finance — Yield That Grows Naturally",
+  title: "Savanna Finance — AI Agents That Pay, Yield That Grows",
   description:
-    "AI-powered yield protocol on Celo. Deposit from any chain via LI.FI, earn passively with smart rebalancing.",
+    "AI-powered yield protocol on Celo with x402 micropayments. Autonomous agents pay for strategy analysis, MiniPay zero-click deposits, cross-chain via LI.FI.",
   icons: {
     icon: "/favicon.ico",
   },
   openGraph: {
-    title: "Savanna Finance — Yield That Grows Naturally",
+    title: "Savanna Finance — AI Agents That Pay, Yield That Grows",
     description:
-      "AI-powered yield protocol on Celo. Deposit from any chain via LI.FI, earn passively with smart rebalancing.",
+      "AI-powered yield protocol on Celo with x402 micropayments. Autonomous agents pay for strategy analysis, MiniPay zero-click deposits, cross-chain via LI.FI.",
     siteName: "Savanna Finance",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Savanna Finance — Yield That Grows Naturally",
+    title: "Savanna Finance — AI Agents That Pay, Yield That Grows",
     description:
-      "AI-powered yield protocol on Celo. Deposit from any chain via LI.FI, earn passively with smart rebalancing.",
+      "AI-powered yield protocol on Celo with x402 micropayments. Autonomous agents pay for strategy analysis, MiniPay zero-click deposits, cross-chain via LI.FI.",
   },
 };
 

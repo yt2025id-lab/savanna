@@ -86,6 +86,7 @@ export function LandingNav() {
           Launch App
         </Link>
       </div>
+      {open && <div className="nav-overlay" onClick={closeMobile} />}
       <button
         className="mobile-toggle"
         onClick={() => setOpen(!open)}

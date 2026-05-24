@@ -84,7 +84,7 @@ export function HeroSection() {
     // Parallax on scroll
     gsap.to(".hero-content", {
       y: 120,
-      opacity: 0,
+      opacity: 0.1,
       ease: "none",
       scrollTrigger: {
         trigger: containerRef.current,
@@ -108,9 +108,10 @@ export function HeroSection() {
 
       {/* Content */}
       <div className="hero-content">
+        <div className="hero-content-backdrop" />
         <div className="hero-badge">
           <div className="hero-badge-dot" />
-          Live on Celo Network
+          Built on Celo · x402 Micropayments · MiniPay Ready
         </div>
 
         <div ref={headlineRef} className="hero-headline-wrapper">
@@ -124,8 +125,7 @@ export function HeroSection() {
         </div>
 
         <p className="hero-sub">
-          AI-powered yield protocol on Celo — maximize returns while the
-          savanna thrives
+          Grow your yield automatically. AI-powered strategy optimization with zero fees — built for the mobile-first future of DeFi on Celo.
         </p>
         <div className="hero-buttons">
           <Link href="/earn" className="btn-primary">
@@ -136,7 +136,7 @@ export function HeroSection() {
           </a>
         </div>
         <p className="hero-powered">
-          <BoltIcon size={12} color="rgba(245, 237, 214, 0.4)" /> Powered by Celo Network — Carbon Negative Blockchain
+          <BoltIcon size={12} color="rgba(245, 237, 214, 0.4)" /> Powered by Celo · Carbon Negative Blockchain · x402 Payment Protocol · MiniPay Integration
         </p>
       </div>
 

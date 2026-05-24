@@ -223,9 +223,9 @@ export function getMinipayDepositMin(decimals: number): {
   standard: bigint;
   minipay: bigint;
 } {
-  const unit = 10n ** BigInt(decimals);
+  const unit = BigInt(10) ** BigInt(decimals);
   return {
-    standard: 10n * unit,
-    minipay: 1n * unit,
+    standard: BigInt(10) * unit,
+    minipay: BigInt(1) * unit,
   };
 }

@@ -11,6 +11,7 @@ export const CONTRACTS = {
     mentoSavingsStrategy: "0x0000000000000000000000000000000000000000" as `0x${string}`,
     reserveStrategy: "0xFF8433711aBD603b3c9A07cfa51A4b157Ec300e9" as `0x${string}`,
     functionsConsumer: "0xb87Baf2131871fDA5c631873618647bEbB87e367" as `0x${string}`,
+    agentIdentity: "0x0000000000000000000000000000000000000000" as `0x${string}`,
     // Tokens
     usdc: "0x9384F5db5Ee68829538cebc659d3b50C6ED74ad2" as `0x${string}`,
     cusd: "0x874359877C2BF3B015C25910E0c3e1F6F9c1B6D8" as `0x${string}`,
@@ -29,6 +30,10 @@ export const CONTRACTS = {
     mentoSavingsStrategy: "0x0000000000000000000000000000000000000000" as `0x${string}`,
     reserveStrategy: "0x0000000000000000000000000000000000000000" as `0x${string}`,
     functionsConsumer: "0x0000000000000000000000000000000000000000" as `0x${string}`,
+    agentIdentity: "0x0000000000000000000000000000000000000000" as `0x${string}`,
+    // ERC-8004 Registries (deployed by ChaosChain on Celo Mainnet)
+    erc8004Identity: "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432" as `0x${string}`,
+    erc8004Reputation: "0x8004BAa17C55a88189AE136b182e5fdA19dE9b63" as `0x${string}`,
     // Tokens
     usdc: "0xcebA9300f2b948710d2653dD7B07f33A8B32118C" as `0x${string}`,
     cusd: "0x765DE816845861e75A25fCA1227689AB8A8B1f84" as `0x${string}`,

@@ -92,9 +92,14 @@ export const SAVANNA_FUNCTIONS_CONSUMER_ABI = [
   "function x402Endpoint() external view returns (string)",
   "function x402PricePerRequest() external view returns (uint256)",
   "function x402Enabled() external view returns (bool)",
+  "function x402PrePaid(bytes32) external view returns (bool)",
+  "function x402PrePayUser(bytes32) external view returns (address)",
   "function totalRequestsSent() external view returns (uint256)",
   "function totalResponsesReceived() external view returns (uint256)",
   "function requestAIStrategy(address user, uint256 timeHorizon) external returns (bytes32 requestId)",
+  "function requestAIStrategyWithPayment(address user, uint256 timeHorizon) external returns (bytes32)",
+  "function confirmAndSendRequest(bytes32 prelimId) external",
+  "function sendPaidRequest(bytes32 prelimId) external",
   "function verifyX402Payment(bytes32 requestId) external",
   "function setX402Endpoint(string calldata endpoint) external",
   "function setX402PricePerRequest(uint256 price) external",
@@ -106,6 +111,7 @@ export const SAVANNA_FUNCTIONS_CONSUMER_ABI = [
   "event X402PriceUpdated(uint256 oldPrice, uint256 newPrice)",
   "event X402StatusUpdated(bool enabled)",
   "event X402PaymentVerified(bytes32 indexed requestId, address indexed user)",
+  "event X402PaymentRequested(bytes32 indexed requestId, address indexed user, uint256 price)",
 ] as const;
 
 export const SAVANNA_ORACLE_ABI = [
@@ -131,34 +137,6 @@ export const ERC20_ABI = [
   "function decimals() external view returns (uint8)",
   "function symbol() external view returns (string)",
   "function name() external view returns (string)",
-] as const;
-
-export const SAVANNA_FUNCTIONS_CONSUMER_ABI = [
-  "function controller() external view returns (address)",
-  "function vault() external view returns (address)",
-  "function subscriptionId() external view returns (uint64)",
-  "function callbackGasLimit() external view returns (uint32)",
-  "function donId() external view returns (bytes32)",
-  "function sourceCode() external view returns (string)",
-  "function pendingRequests(bytes32 requestId) external view returns (address)",
-  "function requestTimeHorizons(bytes32 requestId) external view returns (uint256)",
-  "function totalRequestsSent() external view returns (uint256)",
-  "function totalResponsesReceived() external view returns (uint256)",
-  "function requestAIStrategy(address user, uint256 timeHorizon) external returns (bytes32 requestId)",
-  "function getPendingRequest(bytes32 requestId) external view returns (address user, uint256 timeHorizon)",
-  "function setSourceCode(string calldata newSource) external",
-  "function setSubscriptionId(uint64 newSubId) external",
-  "function setDonId(bytes32 newDonId) external",
-  "function setController(address newController) external",
-  "function setCallbackGasLimit(uint32 newLimit) external",
-  "event AIRequestSent(bytes32 indexed requestId, address indexed user, uint256 timeHorizon)",
-  "event AIResponseReceived(bytes32 indexed requestId, address indexed user, uint8 protocol, uint256 allocationBps, uint256 expectedApy, uint8 riskScore)",
-  "event AIRequestFailed(bytes32 indexed requestId, string reason)",
-  "event SourceCodeUpdated()",
-  "event SubscriptionUpdated(uint64 oldSubId, uint64 newSubId)",
-  "event DonIdUpdated(bytes32 oldDonId, bytes32 newDonId)",
-  "event ControllerUpdated(address oldController, address newController)",
-  "event CallbackGasLimitUpdated(uint32 oldLimit, uint32 newLimit)",
 ] as const;
 
 export const MENTO_SAVINGS_STRATEGY_ABI = [

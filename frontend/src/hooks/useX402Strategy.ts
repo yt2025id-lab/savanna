@@ -124,7 +124,7 @@ export function useX402Strategy() {
         const txHash = await walletClient.sendTransaction({
           account: address,
           to: X402_CONFIG.currency as `0x${string}`,
-          value: 0n,
+          value: BigInt(0),
           data: encodeTransfer(address, X402_CONFIG.currency, amount),
           feeCurrency,
         } as any);

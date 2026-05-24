@@ -5,6 +5,7 @@ import { HeroSection } from "@/components/landing/HeroSection";
 import { AboutSection } from "@/components/landing/AboutSection";
 import { FeaturesSection } from "@/components/landing/FeaturesSection";
 import { HowItWorksSection } from "@/components/landing/HowItWorksSection";
+import { CeloEcosystemSection } from "@/components/landing/CeloEcosystemSection";
 import { StatsSection } from "@/components/landing/StatsSection";
 import { LandingFooter } from "@/components/landing/Footer";
 import { RoundedCorners } from "@/components/landing/RoundedCorners";
@@ -22,6 +23,7 @@ export default function Home() {
         <AboutSection />
         <FeaturesSection />
         <HowItWorksSection />
+        <CeloEcosystemSection />
         <StatsSection />
         <LandingFooter />
       </main>
