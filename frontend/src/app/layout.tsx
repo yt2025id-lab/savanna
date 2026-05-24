@@ -1,9 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Providers } from "@/components/Providers";
 import { ToastProvider } from "@/components/Toast";
-import { Navbar } from "@/components/Navbar";
-import { Footer } from "@/components/Footer";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -16,10 +14,32 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+export const viewport: Viewport = {
+  themeColor: "#0D1A0F",
+  width: "device-width",
+  initialScale: 1,
+};
+
 export const metadata: Metadata = {
-  title: "Savanna Finance — AI-Powered Regenerative Yield on Celo",
+  title: "Savanna Finance — Yield That Grows Naturally",
   description:
-    "Deposit stablecoins, let AI find the best yield across lending protocols on Celo.",
+    "AI-powered yield protocol on Celo. Deposit from any chain via LI.FI, earn passively with smart rebalancing.",
+  icons: {
+    icon: "/favicon.ico",
+  },
+  openGraph: {
+    title: "Savanna Finance — Yield That Grows Naturally",
+    description:
+      "AI-powered yield protocol on Celo. Deposit from any chain via LI.FI, earn passively with smart rebalancing.",
+    siteName: "Savanna Finance",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Savanna Finance — Yield That Grows Naturally",
+    description:
+      "AI-powered yield protocol on Celo. Deposit from any chain via LI.FI, earn passively with smart rebalancing.",
+  },
 };
 
 export default function RootLayout({
@@ -32,9 +52,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <Providers>
           <ToastProvider>
-            <Navbar />
             {children}
-            <Footer />
           </ToastProvider>
         </Providers>
       </body>

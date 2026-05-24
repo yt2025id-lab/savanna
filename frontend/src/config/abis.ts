@@ -98,6 +98,80 @@ export const ERC20_ABI = [
   "function name() external view returns (string)",
 ] as const;
 
+export const SAVANNA_FUNCTIONS_CONSUMER_ABI = [
+  "function controller() external view returns (address)",
+  "function vault() external view returns (address)",
+  "function subscriptionId() external view returns (uint64)",
+  "function callbackGasLimit() external view returns (uint32)",
+  "function donId() external view returns (bytes32)",
+  "function sourceCode() external view returns (string)",
+  "function pendingRequests(bytes32 requestId) external view returns (address)",
+  "function requestTimeHorizons(bytes32 requestId) external view returns (uint256)",
+  "function totalRequestsSent() external view returns (uint256)",
+  "function totalResponsesReceived() external view returns (uint256)",
+  "function requestAIStrategy(address user, uint256 timeHorizon) external returns (bytes32 requestId)",
+  "function getPendingRequest(bytes32 requestId) external view returns (address user, uint256 timeHorizon)",
+  "function setSourceCode(string calldata newSource) external",
+  "function setSubscriptionId(uint64 newSubId) external",
+  "function setDonId(bytes32 newDonId) external",
+  "function setController(address newController) external",
+  "function setCallbackGasLimit(uint32 newLimit) external",
+  "event AIRequestSent(bytes32 indexed requestId, address indexed user, uint256 timeHorizon)",
+  "event AIResponseReceived(bytes32 indexed requestId, address indexed user, uint8 protocol, uint256 allocationBps, uint256 expectedApy, uint8 riskScore)",
+  "event AIRequestFailed(bytes32 indexed requestId, string reason)",
+  "event SourceCodeUpdated()",
+  "event SubscriptionUpdated(uint64 oldSubId, uint64 newSubId)",
+  "event DonIdUpdated(bytes32 oldDonId, bytes32 newDonId)",
+  "event ControllerUpdated(address oldController, address newController)",
+  "event CallbackGasLimitUpdated(uint32 oldLimit, uint32 newLimit)",
+] as const;
+
+export const MENTO_SAVINGS_STRATEGY_ABI = [
+  // BaseStrategy (inherited)
+  "function vault() external view returns (address)",
+  "function controller() external view returns (address)",
+  "function ASSET() external view returns (address)",
+  "function active() external view returns (bool)",
+  "function deposit(address asset, uint256 amount) external",
+  "function withdraw(address asset, uint256 amount, address recipient) external returns (uint256 withdrawn)",
+  "function getBalance(address asset) external view returns (uint256 balance)",
+  // MentoSavingsStrategy
+  "function MENTO_SAVINGS_TOKEN() external view returns (address)",
+  "function protocolName() external pure returns (string memory)",
+  "function getApy() external view returns (uint256)",
+  // BaseStrategy admin
+  "function setVault(address vault_) external",
+  "function setController(address controller_) external",
+  "function setActive(bool active_) external",
+  "function emergencyWithdraw(address asset, uint256 amount, address recipient) external",
+  // Events
+  "event Deposited(address indexed asset, uint256 amount)",
+  "event Withdrawn(address indexed asset, uint256 amount, address recipient)",
+  "event YieldHarvested(address indexed asset, uint256 amount)",
+] as const;
+
+/** Mento Savings Token (sCU / sCE) — ERC-4626 savings vault on Celo */
+export const MENTO_SAVINGS_TOKEN_ABI = [
+  // ERC-4626
+  "function asset() external view returns (address)",
+  "function totalAssets() external view returns (uint256)",
+  "function totalSupply() external view returns (uint256)",
+  "function balanceOf(address account) external view returns (uint256)",
+  "function convertToAssets(uint256 shares) external view returns (uint256)",
+  "function convertToShares(uint256 assets) external view returns (uint256)",
+  "function deposit(uint256 assets, address receiver) external returns (uint256 shares)",
+  "function withdraw(uint256 assets, address receiver, address owner) external returns (uint256 shares)",
+  "function maxDeposit(address) external view returns (uint256)",
+  "function maxWithdraw(address owner) external view returns (uint256)",
+  // Mento-specific
+  "function savingsRate() external view returns (uint256)",
+  "function exchangeRate() external view returns (uint256)",
+  // ERC-20
+  "function decimals() external view returns (uint8)",
+  "function symbol() external view returns (string)",
+  "function name() external view returns (string)",
+] as const;
+
 export const CROSS_CHAIN_RECEIVER_ABI = [
   "function VAULT() external view returns (address)",
   "function VAULT_ASSET() external view returns (address)",
