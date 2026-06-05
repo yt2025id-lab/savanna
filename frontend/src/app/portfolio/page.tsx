@@ -1,8 +1,7 @@
 "use client";
 
-import { useAccount, useBalance, useReadContract } from "wagmi";
+import { useAccount, useBalance, usePublicClient } from "wagmi";
 import { CONTRACTS } from "@/config/contracts";
-import { ERC20_ABI } from "@/config/abis";
 import {
   Wallet,
   TrendingUp,
@@ -54,29 +53,28 @@ export default function PortfolioPage() {
   // Native CELO balance
   const { data: celoBalance } = useBalance({ address, chainId: activeChainId });
 
-  // USDC ERC-20 balance
-  const enabled = !!address && !!contracts?.usdc;
-  const { data: usdcRaw, error: usdcError } = useReadContract({
-    address: contracts?.usdc as `0x${string}` | undefined,
-    abi: ERC20_ABI,
-    functionName: "balanceOf",
-    args: address ? [address] : undefined,
-    query: { enabled },
-  });
-  const { data: usdcDecimals } = useReadContract({
-    address: contracts?.usdc as `0x${string}` | undefined,
-    abi: ERC20_ABI,
-    functionName: "decimals",
-    query: { enabled },
-  });
-  const usdcFormatted = usdcRaw && usdcDecimals ? Number(usdcRaw) / 10 ** Number(usdcDecimals) : 0;
-
-  // Debug logging
+  // USDC ERC-20 balance via viem directly
+  const publicClient = usePublicClient({ chainId: activeChainId });
+  const [usdcFormatted, setUsdcFormatted] = useState(0);
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      console.log({ address, contracts_usdc: contracts?.usdc, usdcRaw, usdcDecimals, usdcError, activeChainId });
-    }
-  }, [address, contracts?.usdc, usdcRaw, usdcDecimals, usdcError, activeChainId]);
+    if (!address || !contracts?.usdc || !publicClient) return;
+    const usdcAddr = contracts.usdc as `0x${string}`;
+    publicClient.readContract({
+      address: usdcAddr,
+      abi: [{ name: "balanceOf", type: "function", stateMutability: "view", inputs: [{ name: "account", type: "address" }], outputs: [{ name: "", type: "uint256" }] }],
+      functionName: "balanceOf",
+      args: [address],
+    }).then((bal) => {
+      publicClient.readContract({
+        address: usdcAddr,
+        abi: [{ name: "decimals", type: "function", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "uint8" }] }],
+        functionName: "decimals",
+        args: [],
+      }).then((dec) => {
+        setUsdcFormatted(Number(bal) / 10 ** Number(dec));
+      });
+    });
+  }, [address, contracts?.usdc, publicClient]);
 
   const celoDecimals = celoBalance?.decimals ?? 18;
   const celoNum = celoBalance ? Number(celoBalance.value) / 10 ** celoDecimals : 0;
