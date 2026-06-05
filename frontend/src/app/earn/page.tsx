@@ -11,6 +11,7 @@ import { CrossChainDeposit } from "@/components/CrossChainDeposit";
 import { TransactionHistory } from "@/components/TransactionHistory";
 import { useVaultData } from "@/hooks/useVaultData";
 import { TrendingUp, Wallet, Zap, Sparkles } from "lucide-react";
+import { useEffect, useState } from "react";
 
 export default function EarnPage() {
   const { address, isConnected } = useAccount();
@@ -30,7 +31,11 @@ export default function EarnPage() {
     ? `${address.slice(0, 6)}...${address.slice(-4)}`
     : "—";
 
-  const now = Math.floor(Date.now() / 1000);
+  const [now, setNow] = useState(Math.floor(Date.now() / 1000));
+  useEffect(() => {
+    const id = setInterval(() => setNow(Math.floor(Date.now() / 1000)), 10000);
+    return () => clearInterval(id);
+  }, []);
   const intervalSec = rebalanceInterval ? Number(rebalanceInterval) : 14400;
   const lastRebalanceSec = lastRebalance ? Number(lastRebalance) : 0;
   const nextRebalanceSec = lastRebalanceSec + intervalSec;
