@@ -1,4 +1,6 @@
-export const SAVANNA_VAULT_ABI = [
+import { parseAbi } from "viem";
+
+export const SAVANNA_VAULT_ABI = parseAbi([
   // ERC-4626
   "function asset() external view returns (address)",
   "function totalAssets() external view returns (uint256)",
@@ -60,9 +62,9 @@ export const SAVANNA_VAULT_ABI = [
   "event MinipayDeposit(address indexed user, uint256 amount, uint256 shares)",
   "event MinipayWalletRegistered(address indexed user, bool status)",
   "event MinipayMinDepositUpdated(uint256 oldMinDeposit, uint256 newMinDeposit)",
-] as const;
+]);
 
-export const SAVANNA_CONTROLLER_ABI = [
+export const SAVANNA_CONTROLLER_ABI = parseAbi([
   "function vault() external view returns (address)",
   "function forwarder() external view returns (address)",
   "function totalRecommendations() external view returns (uint256)",
@@ -81,9 +83,9 @@ export const SAVANNA_CONTROLLER_ABI = [
   "event StrategyExecuted(address indexed user, address strategy, uint256 amount)",
   "event UserWithdrawn(address indexed user, uint256 amount)",
   "event ForwarderUpdated(address indexed oldForwarder, address indexed newForwarder)",
-] as const;
+]);
 
-export const SAVANNA_FUNCTIONS_CONSUMER_ABI = [
+export const SAVANNA_FUNCTIONS_CONSUMER_ABI = parseAbi([
   "function controller() external view returns (address)",
   "function vault() external view returns (address)",
   "function subscriptionId() external view returns (uint64)",
@@ -112,9 +114,9 @@ export const SAVANNA_FUNCTIONS_CONSUMER_ABI = [
   "event X402StatusUpdated(bool enabled)",
   "event X402PaymentVerified(bytes32 indexed requestId, address indexed user)",
   "event X402PaymentRequested(bytes32 indexed requestId, address indexed user, uint256 price)",
-] as const;
+]);
 
-export const SAVANNA_ORACLE_ABI = [
+export const SAVANNA_ORACLE_ABI = parseAbi([
   "function owner() external view returns (address)",
   "function assetFeeds(address asset) external view returns (address)",
   "function isSupportedAsset(address asset) external view returns (bool)",
@@ -128,18 +130,18 @@ export const SAVANNA_ORACLE_ABI = [
   "function setAssetSupport(address asset, bool supported) external",
   "event AssetFeedUpdated(address indexed asset, address indexed feed)",
   "event AssetSupportUpdated(address indexed asset, bool supported)",
-] as const;
+]);
 
-export const ERC20_ABI = [
+export const ERC20_ABI = parseAbi([
   "function balanceOf(address account) external view returns (uint256)",
   "function allowance(address owner, address spender) external view returns (uint256)",
   "function approve(address spender, uint256 amount) external returns (bool)",
   "function decimals() external view returns (uint8)",
   "function symbol() external view returns (string)",
   "function name() external view returns (string)",
-] as const;
+]);
 
-export const MENTO_SAVINGS_STRATEGY_ABI = [
+export const MENTO_SAVINGS_STRATEGY_ABI = parseAbi([
   // BaseStrategy (inherited)
   "function vault() external view returns (address)",
   "function controller() external view returns (address)",
@@ -161,10 +163,10 @@ export const MENTO_SAVINGS_STRATEGY_ABI = [
   "event Deposited(address indexed asset, uint256 amount)",
   "event Withdrawn(address indexed asset, uint256 amount, address recipient)",
   "event YieldHarvested(address indexed asset, uint256 amount)",
-] as const;
+]);
 
 /** Mento Savings Token (sCU / sCE) — ERC-4626 savings vault on Celo */
-export const MENTO_SAVINGS_TOKEN_ABI = [
+export const MENTO_SAVINGS_TOKEN_ABI = parseAbi([
   // ERC-4626
   "function asset() external view returns (address)",
   "function totalAssets() external view returns (uint256)",
@@ -183,9 +185,9 @@ export const MENTO_SAVINGS_TOKEN_ABI = [
   "function decimals() external view returns (uint8)",
   "function symbol() external view returns (string)",
   "function name() external view returns (string)",
-] as const;
+]);
 
-export const SAVANNA_FAUCET_ABI = [
+export const SAVANNA_FAUCET_ABI = parseAbi([
   "function owner() external view returns (address)",
   "function getTokenCount() external view returns (uint256)",
   "function getTokenCooldown(address token, address user) external view returns (uint256 remaining)",
@@ -198,9 +200,9 @@ export const SAVANNA_FAUCET_ABI = [
   "function withdrawToken(address token, uint256 amount) external",
   "event TokenClaimed(address indexed user, address indexed token, uint256 amount)",
   "event TokenAdded(address indexed token, uint256 amount, uint256 cooldown)",
-] as const;
+]);
 
-export const CROSS_CHAIN_RECEIVER_ABI = [
+export const CROSS_CHAIN_RECEIVER_ABI = parseAbi([
   "function VAULT() external view returns (address)",
   "function VAULT_ASSET() external view returns (address)",
   "function totalCrossChainDeposits() external view returns (uint256)",
@@ -219,4 +221,4 @@ export const CROSS_CHAIN_RECEIVER_ABI = [
   "event SourceChainUpdated(uint256 indexed chainId, bool allowed)",
   "event BridgeTokenUpdated(address indexed token, bool supported)",
   "event DepositReceived(address indexed depositor, uint256 indexed sourceChainId, uint256 amount, address bridgeToken, uint256 vaultShares)",
-] as const;
+]);
