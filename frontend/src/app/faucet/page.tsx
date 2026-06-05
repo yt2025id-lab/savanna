@@ -1,7 +1,7 @@
 "use client";
 
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Droplets, Clock, CheckCircle2, AlertCircle, Zap, Info, ChevronRight } from "lucide-react";
 import { useAuth } from "@/components/AuthModal";
 
@@ -134,10 +134,12 @@ export default function FaucetPage() {
   const addClaimedCount = useCallback(() => {
     if (!address) return;
     const key = `savanna-faucet-claimed-${address}`;
-    const next = totalClaimed + 1;
-    setTotalClaimed(next);
-    localStorage.setItem(key, String(next));
-  }, [address, totalClaimed]);
+    setTotalClaimed((prev) => {
+      const next = prev + 1;
+      localStorage.setItem(key, String(next));
+      return next;
+    });
+  }, [address]);
 
   return (
     <main className="relative flex-1 mx-auto w-full max-w-4xl px-4 py-8 sm:px-6">
@@ -274,8 +276,10 @@ function FaucetCard({
     cbETH: "0x0000000000000000000000000000000000000000" as `0x${string}`,
   };
 
+  const claimedRef = useRef(false);
   useEffect(() => {
-    if (isSuccess && address) {
+    if (isSuccess && address && !claimedRef.current) {
+      claimedRef.current = true;
       setCooldownEnd(token.symbol, address);
       onClaimed();
     }
