@@ -1,14 +1,49 @@
 "use client";
 
-import { useAccount, useReadContract } from "wagmi";
+import { useAccount, useReadContract, usePublicClient } from "wagmi";
 import { formatUnits } from "viem";
-import { SAVANNA_VAULT_ABI, SAVANNA_CONTROLLER_ABI, SAVANNA_ORACLE_ABI, ERC20_ABI } from "@/config/abis";
+import { SAVANNA_VAULT_ABI, SAVANNA_CONTROLLER_ABI, SAVANNA_ORACLE_ABI } from "@/config/abis";
 import { getContracts } from "@/config/contracts";
+import { useState, useEffect } from "react";
 
 export function useVaultData() {
   const { address, chainId } = useAccount();
   const activeChainId = chainId ?? 11142220;
   const contracts = getContracts(activeChainId);
+  const publicClient = usePublicClient({ chainId: activeChainId });
+  const [tokenBalance, setTokenBalance] = useState<bigint | undefined>(undefined);
+  const [tokenDecimals, setTokenDecimals] = useState<number>(6);
+  const [tokenSymbol, setTokenSymbol] = useState<string>("USDC");
+  const [allowance, setAllowance] = useState<bigint | undefined>(undefined);
+
+  useEffect(() => {
+    if (!address || !contracts.usdc || !publicClient) return;
+    const usdcAddr = contracts.usdc as `0x${string}`;
+    publicClient.readContract({
+      address: usdcAddr,
+      abi: [{ name: "balanceOf", type: "function", stateMutability: "view", inputs: [{ name: "account", type: "address" }], outputs: [{ name: "", type: "uint256" }] }],
+      functionName: "balanceOf",
+      args: [address],
+    }).then((bal) => setTokenBalance(bal as bigint));
+    publicClient.readContract({
+      address: usdcAddr,
+      abi: [{ name: "decimals", type: "function", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "uint8" }] }],
+      functionName: "decimals",
+      args: [],
+    }).then((dec) => setTokenDecimals(Number(dec)));
+    publicClient.readContract({
+      address: usdcAddr,
+      abi: [{ name: "symbol", type: "function", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "string" }] }],
+      functionName: "symbol",
+      args: [],
+    }).then((sym) => setTokenSymbol(sym as string));
+    publicClient.readContract({
+      address: usdcAddr,
+      abi: [{ name: "allowance", type: "function", stateMutability: "view", inputs: [{ name: "owner", type: "address" }, { name: "spender", type: "address" }], outputs: [{ name: "", type: "uint256" }] }],
+      functionName: "allowance",
+      args: [address, contracts.vault],
+    }).then((all) => setAllowance(all as bigint));
+  }, [address, contracts.usdc, contracts.vault, publicClient]);
 
   // Read total assets (TVL)
   const { data: totalAssets, isLoading: loadingTotalAssets } = useReadContract({
@@ -113,36 +148,6 @@ export function useVaultData() {
     args: address ? [address] : undefined,
   });
 
-  // Read token balance
-  const { data: tokenBalance } = useReadContract({
-    address: contracts.usdc,
-    abi: ERC20_ABI,
-    functionName: "balanceOf",
-    args: address ? [address] : undefined,
-  });
-
-  // Read token decimals
-  const { data: tokenDecimals } = useReadContract({
-    address: contracts.usdc,
-    abi: ERC20_ABI,
-    functionName: "decimals",
-  });
-
-  // Read token symbol
-  const { data: tokenSymbol } = useReadContract({
-    address: contracts.usdc,
-    abi: ERC20_ABI,
-    functionName: "symbol",
-  });
-
-  // Read allowance
-  const { data: allowance } = useReadContract({
-    address: contracts.usdc,
-    abi: ERC20_ABI,
-    functionName: "allowance",
-    args: address ? [address, contracts.vault] : undefined,
-  });
-
   // Read total recommendations
   const { data: totalRecommendations } = useReadContract({
     address: contracts.controller,
@@ -159,7 +164,7 @@ export function useVaultData() {
     query: { enabled: !!contracts.oracle },
   });
 
-  const dec = (tokenDecimals as number) ?? 6;
+  const dec = tokenDecimals;
 
   // Format helpers
   const formatBalance = (val: unknown) => {
@@ -195,7 +200,7 @@ export function useVaultData() {
     hasActiveRequest: hasActiveRequest as boolean | undefined,
     tokenBalance: tokenBalance as bigint | undefined,
     tokenDecimals: dec,
-    tokenSymbol: (tokenSymbol as string) ?? "USDC",
+    tokenSymbol,
     allowance: allowance as bigint | undefined,
     totalRecommendations: totalRecommendations as bigint | undefined,
     oracleAssetPrice: oracleAssetPrice as bigint | undefined,
