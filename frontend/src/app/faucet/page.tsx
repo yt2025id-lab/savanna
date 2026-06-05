@@ -4,6 +4,7 @@ import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagm
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Droplets, Clock, CheckCircle2, AlertCircle, Zap, Info, ChevronRight } from "lucide-react";
 import { useAuth } from "@/components/AuthModal";
+import { CONTRACTS } from "@/config/contracts";
 
 /* ------------------------------------------------------------------ */
 /*  Token config                                                       */
@@ -270,8 +271,9 @@ function FaucetCard({
   ] as const;
 
   // Token address mapping (testnet)
+  const usdcAddress = CONTRACTS[11142220]?.usdc;
   const TOKEN_ADDRESSES: Record<string, `0x${string}`> = {
-    USDC: (process.env.NEXT_PUBLIC_USDC_ADDRESS || "0x9384F5db5Ee68829538cebc659d3b50C6ED74ad2") as `0x${string}`,
+    USDC: usdcAddress as `0x${string}`,
     cbBTC: "0x0000000000000000000000000000000000000000" as `0x${string}`,
     cbETH: "0x0000000000000000000000000000000000000000" as `0x${string}`,
   };

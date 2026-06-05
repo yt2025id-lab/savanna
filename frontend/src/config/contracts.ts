@@ -14,7 +14,7 @@ export const CONTRACTS = {
     agentIdentity: "0x0000000000000000000000000000000000000000" as `0x${string}`,
     faucet: "0xc2F091F92f6911Ff917F01df8560588D64951e23" as `0x${string}`,
     // Tokens
-    usdc: "0x9384F5db5Ee68829538cebc659d3b50C6ED74ad2" as `0x${string}`,
+    usdc: "0x189e4F63F36A3b1Af12aEd9D4f03b93A09571f71" as `0x${string}`,
     cusd: "0x874359877C2BF3B015C25910E0c3e1F6F9c1B6D8" as `0x${string}`,
     ceur: "0x0000000000000000000000000000000000000000" as `0x${string}`,
     mentoSavingsCU: "0x0000000000000000000000000000000000000000" as `0x${string}`,
