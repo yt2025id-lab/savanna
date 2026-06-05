@@ -259,6 +259,19 @@ function FaucetCard({
   const { writeContract, data: txHash, isPending: isWriting, error, reset } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash: txHash });
 
+  // Faucet contract address from config
+  const FAUCET_ADDRESS = process.env.NEXT_PUBLIC_FAUCET_ADDRESS as `0x${string}` | undefined;
+  const FAUCET_ABI = [
+    { name: "claim", type: "function", stateMutability: "nonpayable", inputs: [{ name: "token", type: "address" }], outputs: [] },
+  ] as const;
+
+  // Token address mapping (testnet)
+  const TOKEN_ADDRESSES: Record<string, `0x${string}`> = {
+    USDC: process.env.NEXT_PUBLIC_USDC_ADDRESS || "0x9384F5db5Ee68829538cebc659d3b50C6ED74ad2",
+    cbBTC: "0x0000000000000000000000000000000000000000",
+    cbETH: "0x0000000000000000000000000000000000000000",
+  };
+
   useEffect(() => {
     if (isSuccess && address) {
       setCooldownEnd(token.symbol, address);
@@ -267,14 +280,19 @@ function FaucetCard({
   }, [isSuccess, token.symbol, address, onClaimed]);
 
   const handleClaim = () => {
-    if (!address || !canClaim) return;
-    // Placeholder — actual faucet contract call wired here
-    // For now, simulate a successful claim after a brief delay
+    if (!address || !canClaim || !FAUCET_ADDRESS) return;
+    const tokenAddress = TOKEN_ADDRESSES[token.symbol];
+    if (tokenAddress === "0x0000000000000000000000000000000000000000") {
+      // Token not in faucet yet — simulate for demo
+      setCooldownEnd(token.symbol, address);
+      onClaimed();
+      return;
+    }
     writeContract({
-      address: (address || "0x0000000000000000000000000000000000000000") as `0x${string}`,
-      abi: [{ name: "faucet", type: "function", stateMutability: "nonpayable", inputs: [], outputs: [] }],
-      functionName: "faucet" as never,
-      args: [] as never,
+      address: FAUCET_ADDRESS,
+      abi: FAUCET_ABI,
+      functionName: "claim",
+      args: [tokenAddress as `0x${string}`],
       chainId: 11142220,
     });
   };

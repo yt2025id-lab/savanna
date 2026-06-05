@@ -6,14 +6,12 @@ import { parseUnits, formatUnits } from "viem";
 import { SAVANNA_VAULT_ABI, ERC20_ABI } from "@/config/abis";
 import { getContracts } from "@/config/contracts";
 import { useVaultData } from "@/hooks/useVaultData";
-import { ArrowDownToLine, AlertCircle, Loader2, CheckCircle2 } from "lucide-react";
+import { ArrowDownToLine, AlertCircle, Loader2, CheckCircle2, Sparkles } from "lucide-react";
 import clsx from "clsx";
 
 const ASSETS = [
-  { symbol: "USDC", label: "USD Coin", decimals: 6, apy: "18.5" },
-  // CELO and cUSD support coming soon — vault currently only accepts USDC
-  // { symbol: "CELO", label: "Celo Native", decimals: 18, apy: "12.3" },
-  // { symbol: "cUSD", label: "Celo Dollar", decimals: 18, apy: "15.8" },
+  { symbol: "USDC", label: "USD Coin", decimals: 6 },
+  // { symbol: "cUSD", label: "Celo Dollar", decimals: 18 },
 ] as const;
 
 type AssetSymbol = (typeof ASSETS)[number]["symbol"];
@@ -189,21 +187,12 @@ export function DepositCard() {
           </div>
         </div>
 
-        {/* APY preview */}
-        <div className="flex items-center justify-between rounded-lg bg-accent-dim px-4 py-2.5">
-          <span className="text-xs text-muted-light">Estimated APY</span>
-          <span className="text-sm font-bold text-accent">{asset.apy}%</span>
+        {/* AI-Optimized APY banner */}
+        <div className="flex items-center gap-2 rounded-lg bg-accent-dim px-4 py-2.5">
+          <Sparkles className="h-4 w-4 text-accent shrink-0" />
+          <span className="text-xs text-muted-light flex-1">AI-optimized yield</span>
+          <span className="text-xs font-semibold text-accent">Auto-selected best protocol</span>
         </div>
-
-        {/* Estimated return */}
-        {amount && !isNaN(Number(amount)) && Number(amount) > 0 && (
-          <div className="flex items-center justify-between text-xs text-muted">
-            <span>Estimated yearly return</span>
-            <span className="text-accent font-medium">
-              ${(Number(amount) * Number(asset.apy) / 100).toFixed(2)}
-            </span>
-          </div>
-        )}
 
         {/* Action buttons */}
         <div className="space-y-2">

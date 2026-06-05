@@ -3,22 +3,23 @@
   "chainId": 11142220,
   "deployer": "0x757DE1048723381fceB0Ddd301eFC28EeeD6760c",
   "contracts": {
-    "asset": "0x9384F5db5Ee68829538cebc659d3b50C6ED74ad2",
-    "oracle": "0xFEe2639ecFaBcF359d4D4a06aa7Eb5FBbe4DcAb4",
-    "vault": "0xfDF9FBCcA4cAC29F0d793F4797cAC2F87dBD99Af",
-    "controller": "0xf4B8358E372aE659a4D9219DD86C61233cE4280e",
-    "feedConsumer": "0x5B9f5553A802514f358ef61c56742a0B831C6614",
-    "crossChainReceiver": "0x3fD3a166F5aCcbe578777ed47c2651598aC152db",
-    "aaveStrategy": "0xcBceC5a5C17797C601b1f747a3977423397C904e",
-    "reserveStrategy": "0xFF8433711aBD603b3c9A07cfa51A4b157Ec300e9",
-    "functionsConsumer": "0xb87Baf2131871fDA5c631873618647bEbB87e367"
+    "mockUSDC": "0x189e4f63f36a3b1af12aed9d4f03b93a09571f71",
+    "oracle": "0xdd083ebc36d4ab4a18374b7cdeb0f2c58ef5055a",
+    "vault": "0x511da92e6cc7143ceb7480d3ce3962f227158aa3",
+    "controller": "0x912bf274e2e6a69e1017e1e8ed0dc3e3d719f933",
+    "feedConsumer": "0x71cb8670abdefc6796437f568ddcef1faaecb698",
+    "crossChainReceiver": "0x0af47a3db1b4c4276fd89a295dc36dfb4dbb2c02",
+    "aaveStrategy": "0xf49c062ff27689845e1614d740a0636f2049ce9e",
+    "reserveStrategy": "0x14a25285ae30e45cf9ebc6179ba36353be980f7e",
+    "faucet": "0xc2f091f92f6911ff917f01df8560588d64951e23"
+      "faucet": "0xc2F091F92f6911Ff917F01df8560588D64951e23",
+    "functionsConsumer": "0x9696ace855f66c5cea59320a3ae39904b5385c89"
   },
   "chainlinkFunctions": {
     "router": "0xA9d587a00A31A52Ed70D6026794a8FC5E2F5dCb0",
     "donId": "fun-celo-alfajores-1",
-    "subscriptionId": 0,
-    "note": "Set subscriptionId after creating at https://functions.chain.link"
+    "subscriptionId": 1,
+    "note": "Set real subscriptionId after creating at https://functions.chain.link"
   },
-  "deployedAt": "2025-05-22",
-  "functionsConsumerDeployedAt": "2026-05-23"
+  "deployedAt": "2026-06-04"
 }

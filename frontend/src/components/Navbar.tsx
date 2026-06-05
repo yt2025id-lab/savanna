@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { ConnectWallet } from "@/components/ConnectWallet";
 import { LogoMark } from "@/components/landing/Icons";
 import { Droplets, TrendingUp, Brain, Briefcase } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -148,11 +148,7 @@ export function Navbar() {
             </svg>
           </button>
 
-          <ConnectButton
-            chainStatus="icon"
-            accountStatus="address"
-            showBalance={false}
-          />
+          <ConnectWallet />
         </div>
       </div>
 

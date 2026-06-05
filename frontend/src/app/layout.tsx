@@ -1,7 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { headers } from "next/headers";
 import { Providers } from "@/components/Providers";
 import { ToastProvider } from "@/components/Toast";
+import { config } from "@/config/wagmi";
+import { cookieToInitialState } from "wagmi";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -42,15 +45,19 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const headersList = await headers();
+  const cookie = headersList.get("cookie");
+  const initialState = cookieToInitialState(config, cookie);
+
   return (
     <html lang="en" className="h-full antialiased">
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        <Providers>
+        <Providers initialState={initialState}>
           <ToastProvider>
             {children}
           </ToastProvider>

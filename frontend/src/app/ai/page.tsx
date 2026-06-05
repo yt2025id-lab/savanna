@@ -53,43 +53,8 @@ const QUICK_NOTES = [
 ] as const;
 
 /* ------------------------------------------------------------------ */
-/*  Simulated AI strategies                                            */
+/*  Live strategy type — no mock data used                            */
 /* ------------------------------------------------------------------ */
-const MOCK_STRATEGIES = [
-  {
-    name: "Aave V3 Lending",
-    protocol: "Aave",
-    apy: 4.2,
-    risk: "Low",
-    tvl: "$12.4M",
-    confidence: 94,
-    chain: "Celo",
-    allocation: 60,
-    color: "#B6509E",
-  },
-  {
-    name: "Moola Market Supply",
-    protocol: "Moola",
-    apy: 6.8,
-    risk: "Medium",
-    tvl: "$3.1M",
-    confidence: 82,
-    chain: "Celo",
-    allocation: 25,
-    color: "#4A7C59",
-  },
-  {
-    name: "Savanna Reserve",
-    protocol: "Savanna",
-    apy: 2.1,
-    risk: "Low",
-    tvl: "$890K",
-    confidence: 98,
-    chain: "Celo",
-    allocation: 15,
-    color: "#C8A84B",
-  },
-];
 
 /* ------------------------------------------------------------------ */
 /*  AI Page                                                            */
@@ -139,7 +104,7 @@ export default function AIPage() {
 
       if (result) {
         const mapped = result.allProtocols.map((p, i) => ({
-          name: p.protocol === "Aave V3" ? "Aave V3 Lending" : p.protocol === "Mento Savings" ? "Mento sCU" : p.protocol === "Moola" ? "Moola Market Supply" : p.protocol,
+          name: p.protocol === "Aave V3" ? "Aave V3 Lending" : p.protocol === "MentoSavings" ? "Mento Savings" : p.protocol === "Moola" ? "Moola Market Supply" : p.protocol === "Reserve" ? "Savanna Reserve" : p.protocol,
           protocol: p.protocol,
           apy: p.apy,
           risk: p.safetyScore > 90 ? "Low" : p.safetyScore > 70 ? "Medium" : "High",
@@ -147,17 +112,15 @@ export default function AIPage() {
           confidence: p.safetyScore,
           chain: "Celo",
           allocation: i === 0 ? Math.round(result.allocationBps / 100) : Math.round((10000 - result.allocationBps) / 200),
-          color: p.protocolId === 0 ? "#B6509E" : p.protocolId === 1 ? "#4A7C59" : "#C8A84B",
+          color: p.protocolId === 0 ? "#B6509E" : p.protocolId === 1 ? "#4A7C59" : p.protocolId === 2 ? "#fb6236" : "#C8A84B",
         }));
         setStrategies(mapped);
         setShowResults(true);
-      } else if (x402Error) {
-        setStrategies(MOCK_STRATEGIES);
-        setShowResults(true);
+      } else {
+        setError(x402Error || "No AI response received. Check x402 server connection.");
       }
-    } catch {
-      setStrategies(MOCK_STRATEGIES);
-      setShowResults(true);
+    } catch (err: any) {
+      setError(err?.message || "AI strategy analysis failed");
     }
 
     setIsRunning(false);

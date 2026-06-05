@@ -268,6 +268,47 @@ contract SavannaVault is ERC4626, Ownable, ISavannaVault, ReentrancyGuard, Pausa
         emit Withdrawn(receiver, assets, shares);
     }
 
+    /// @notice DevRel trigger: signal strategy intent without transferring tokens
+    /// @dev Only callable when vault is configured in simulation mode
+    function triggerStrategyRequest(uint256 timeHorizon) external nonReentrant whenNotPaused returns (bool) {
+        if (controller == address(0)) revert Errors.Savanna__ControllerNotSet();
+        if (_activeRequests[msg.sender]) revert Errors.Savanna__ActiveRequestExists();
+        if (timeHorizon < Constants.MIN_TIME_HORIZON || timeHorizon > Constants.MAX_TIME_HORIZON) {
+            revert Errors.Savanna__InvalidTimeHorizon(
+                timeHorizon, Constants.MIN_TIME_HORIZON, Constants.MAX_TIME_HORIZON
+            );
+        }
+
+        _activeRequests[msg.sender] = true;
+        _positions[msg.sender] = DataTypes.UserPosition({
+            depositAmount: 0,
+            timeHorizon: timeHorizon,
+            depositTimestamp: block.timestamp,
+            activeStrategy: address(0),
+            allocatedAmount: 0,
+            isActive: false
+        });
+
+        emit StrategyRequested(msg.sender, 0, timeHorizon, block.timestamp);
+        return true;
+    }
+
+    /// @notice DevRel trigger: simulate strategy completion (no real tokens moved)
+    function triggerCompleteStrategy(address user) external onlyOwner returns (bool) {
+        DataTypes.UserPosition storage pos = _positions[user];
+        if (!pos.isActive) revert Errors.Savanna__NoActivePosition();
+
+        uint256 allocated = pos.allocatedAmount;
+        totalDeployed -= allocated;
+        pos.isActive = false;
+        pos.activeStrategy = address(0);
+        pos.allocatedAmount = 0;
+        totalPositions--;
+
+        emit StrategyCompleted(user, allocated);
+        return true;
+    }
+
     /// @notice Override redeem with pause check
     function redeem(uint256 shares, address receiver, address owner)
         public

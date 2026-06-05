@@ -13,8 +13,9 @@ library Constants {
 
     // ============ Vault ============
 
-    /// @notice Minimum deposit amount: 10 units (6 decimals for USDC, 18 decimals for USDm — handled via _decimalsOffset)
-    uint256 public constant MIN_DEPOSIT = 10e6;
+    /// @notice Minimum deposit amount: 10 units — vault uses dynamic calculation from asset.decimals()
+    /// @dev Not used directly in vault; vault computes minDeposit = 10 * 10**assetDecimals in constructor
+    uint256 public constant MIN_DEPOSIT_BASE = 10;
     /// @notice Maximum time horizon: 365 days
     uint256 public constant MAX_TIME_HORIZON = 365 days;
     /// @notice Minimum time horizon: 1 day

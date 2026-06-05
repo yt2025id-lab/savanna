@@ -1,17 +1,28 @@
-import { getDefaultConfig } from "@rainbow-me/rainbowkit";
+import { createConfig, http, cookieStorage, createStorage } from "wagmi";
+import { injected, coinbaseWallet } from "wagmi/connectors";
 import { celo, celoSepolia, mainnet, arbitrum, optimism, polygon, base, bsc, avalanche } from "wagmi/chains";
 
-export const config = getDefaultConfig({
-  appName: "Savanna Finance",
-  projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "demo",
-  chains: [celo, celoSepolia, mainnet, arbitrum, optimism, polygon, base, bsc, avalanche],
+export const config = createConfig({
+  chains: [celoSepolia, celo, mainnet, arbitrum, optimism, polygon, base, bsc, avalanche],
+  connectors: [
+    injected({ target: "metaMask" }),
+    coinbaseWallet(),
+  ],
+  transports: {
+    [celoSepolia.id]: http("https://celo-sepolia.gateway.tenderly.co"),
+    [celo.id]: http("https://forno.celo.org"),
+    [mainnet.id]: http(),
+    [arbitrum.id]: http(),
+    [optimism.id]: http(),
+    [polygon.id]: http(),
+    [base.id]: http(),
+    [bsc.id]: http(),
+    [avalanche.id]: http(),
+  },
   ssr: true,
+  storage: createStorage({ storage: cookieStorage, key: "wagmi" }),
 });
 
-/**
- * Celo-specific chain configurations for Savanna Finance.
- * Used by MiniPay detection, cUSD support, and Mento integration.
- */
 export const CELO_CHAINS = {
   mainnet: {
     id: 42220,

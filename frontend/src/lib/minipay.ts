@@ -151,13 +151,26 @@ export const MINIPAY_APP_META = {
 // ─── x402 Payment Integration ──────────────────────────────────────────────
 
 /** x402 payment configuration for AI strategy endpoint */
-export const X402_CONFIG = {
-  endpoint: process.env.NEXT_PUBLIC_X402_ENDPOINT || "https://savanna-x402.onrender.com/api/strategy/analyze",
-  price: process.env.NEXT_PUBLIC_X402_PRICE || "100000",
-  currency: "0xcebA9300f2b948710d2653dD7B07f33A8B32118C" as `0x${string}`,
-  chainId: 42220,
-  feeCurrency: "0x2F25deB3848C207fc8E0c34035B3Ba7fC157602B" as `0x${string}`,
-} as const;
+export function getX402Config(chainId?: number) {
+  const isTestnet = chainId === 11142220;
+  return {
+    endpoint: process.env.NEXT_PUBLIC_X402_ENDPOINT || (isTestnet
+      ? "http://localhost:3001/api/strategy/analyze"
+      : "https://savanna-x402.onrender.com/api/strategy/analyze"),
+    price: process.env.NEXT_PUBLIC_X402_PRICE || "100000",
+    currency: (isTestnet
+      ? "0x9384F5db5Ee68829538cebc659d3b50C6ED74ad2"  // testnet USDC
+      : "0xcebA9300f2b948710d2653dD7B07f33A8B32118C"   // mainnet USDC
+    ) as `0x${string}`,
+    chainId: isTestnet ? 11142220 : 42220,
+    feeCurrency: (isTestnet
+      ? "0x874359877C2BF3B015C25910E0c3e1F6F9c1B6D8"  // testnet cUSD
+      : "0x2F25deB3848C207fc8E0c34035B3Ba7fC157602B"   // mainnet USDC fee adapter
+    ) as `0x${string}`,
+  } as const;
+}
+
+export const X402_CONFIG = getX402Config(11142220);
 
 /**
  * Build x402 payment header value for a strategy request.

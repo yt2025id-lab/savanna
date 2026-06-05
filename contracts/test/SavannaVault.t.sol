@@ -114,7 +114,7 @@ contract SavannaVaultTest is Test {
 
         vm.prank(alice);
         vm.expectRevert(
-            abi.encodeWithSelector(Errors.Savanna__InsufficientDeposit.selector, lowAmount, Constants.MIN_DEPOSIT)
+            abi.encodeWithSelector(Errors.Savanna__InsufficientDeposit.selector, lowAmount, vault.minDeposit())
         );
         vault.deposit(lowAmount, alice);
     }
@@ -150,7 +150,7 @@ contract SavannaVaultTest is Test {
     function test_requestStrategy_revertNoDeposit() public {
         vm.prank(alice);
         vm.expectRevert(
-            abi.encodeWithSelector(Errors.Savanna__InsufficientDeposit.selector, 0, Constants.MIN_DEPOSIT)
+            abi.encodeWithSelector(Errors.Savanna__InsufficientDeposit.selector, 0, vault.minDeposit())
         );
         vault.requestStrategy(30 days);
     }

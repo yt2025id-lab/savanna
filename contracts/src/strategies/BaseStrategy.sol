@@ -120,11 +120,19 @@ abstract contract BaseStrategy is IStrategy, Ownable {
         active = active_;
     }
 
-    /// @notice Emergency withdraw — recover tokens stuck in strategy
+    /// @notice Emergency withdraw — recover tokens stuck in strategy (non-protocol tokens only)
     /// @param asset Token address to recover
     /// @param amount Amount to recover
     /// @param recipient Address to send recovered tokens
+    /// @dev Will revert if trying to withdraw the vault's underlying asset above idle balance
+    ///      to prevent draining aTokens / protocol position tokens that belong to depositors.
     function emergencyWithdraw(address asset, uint256 amount, address recipient) external onlyOwner {
+        if (asset == ASSET) {
+            uint256 idleBalance = IERC20(asset).balanceOf(address(this));
+            if (amount > idleBalance) {
+                revert Errors.Savanna__StrategyInsufficientFunds(amount, idleBalance);
+            }
+        }
         IERC20(asset).safeTransfer(recipient, amount);
     }
 

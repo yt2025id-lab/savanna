@@ -389,9 +389,12 @@ contract SavannaFunctionsConsumer is FunctionsClient, Ownable {
     function _getRevertReason(bytes memory reason) internal pure returns (string memory) {
         if (reason.length < 68) return "Unknown error";
         // Skip 4-byte selector + 32-byte offset + 32-byte length
-        // casting to 'bytes32' is safe because we're reading 32 bytes from memory, then shifting to extract length
+        // Standard ABI encoding: offset(36) = 32 bytes for string offset, then 32 bytes for length
         // forge-lint: disable-next-line(unsafe-typecast)
-        uint256 len = uint256(bytes32(reason) >> 128);
+        uint256 len;
+        assembly {
+            len := mload(add(reason, 68))
+        }
         if (reason.length < 68 + len) return "Unknown error";
         bytes memory reasonBytes = new bytes(len);
         for (uint256 i = 0; i < len; i++) {

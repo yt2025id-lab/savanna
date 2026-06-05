@@ -185,6 +185,21 @@ export const MENTO_SAVINGS_TOKEN_ABI = [
   "function name() external view returns (string)",
 ] as const;
 
+export const SAVANNA_FAUCET_ABI = [
+  "function owner() external view returns (address)",
+  "function getTokenCount() external view returns (uint256)",
+  "function getTokenCooldown(address token, address user) external view returns (uint256 remaining)",
+  "function tokens(address) external view returns (address token, uint256 amount, uint256 cooldown)",
+  "function lastClaim(address, address) external view returns (uint256)",
+  "function claim(address token) external",
+  "function claimMultiple(address[] calldata tokens) external",
+  "function addToken(address token, uint256 amount, uint256 cooldown) external",
+  "function updateToken(address token, uint256 amount, uint256 cooldown) external",
+  "function withdrawToken(address token, uint256 amount) external",
+  "event TokenClaimed(address indexed user, address indexed token, uint256 amount)",
+  "event TokenAdded(address indexed token, uint256 amount, uint256 cooldown)",
+] as const;
+
 export const CROSS_CHAIN_RECEIVER_ABI = [
   "function VAULT() external view returns (address)",
   "function VAULT_ASSET() external view returns (address)",

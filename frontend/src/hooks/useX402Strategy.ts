@@ -4,7 +4,7 @@ import { useState, useCallback } from "react";
 import { useAccount } from "wagmi";
 import { createWalletClient, custom } from "viem";
 import { celo } from "viem/chains";
-import { X402_CONFIG, parseX402Requirement } from "@/lib/minipay";
+import { getX402Config, parseX402Requirement } from "@/lib/minipay";
 
 interface StrategyResponse {
   protocolId: number;
@@ -37,8 +37,10 @@ export function useX402Strategy() {
       setResult(null);
       setPaymentRequired(false);
 
+      const config = getX402Config(params.userAddress ? 11142220 : undefined);
+
       try {
-        const res = await fetch(`${X402_CONFIG.endpoint}`, {
+        const res = await fetch(`${config.endpoint}`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -89,6 +91,8 @@ export function useX402Strategy() {
       setIsLoading(true);
       setError(null);
 
+      const config = getX402Config(11142220);
+
       try {
         const ethereum = (window as any).ethereum;
         const walletClient = createWalletClient({
@@ -96,7 +100,7 @@ export function useX402Strategy() {
           transport: custom(ethereum),
         });
 
-        const res = await fetch(`${X402_CONFIG.endpoint}`, {
+        const res = await fetch(`${config.endpoint}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(params),
@@ -119,17 +123,17 @@ export function useX402Strategy() {
         setPaymentRequired(true);
 
         const amount = BigInt(req.price);
-        const feeCurrency = X402_CONFIG.feeCurrency;
+        const feeCurrency = config.feeCurrency;
 
         const txHash = await walletClient.sendTransaction({
           account: address,
-          to: X402_CONFIG.currency as `0x${string}`,
+          to: config.currency as `0x${string}`,
           value: BigInt(0),
-          data: encodeTransfer(address, X402_CONFIG.currency, amount),
+          data: encodeTransfer(address, config.currency, amount),
           feeCurrency,
         } as any);
 
-        const retryRes = await fetch(`${X402_CONFIG.endpoint}`, {
+        const retryRes = await fetch(`${config.endpoint}`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -169,8 +173,7 @@ export function useX402Strategy() {
 
 function encodeTransfer(from: string, token: string, amount: bigint): `0x${string}` {
   const selector = "0xa9059cbb";
-  const to = X402_CONFIG.currency;
-  const paddedTo = to.toLowerCase().replace("0x", "").padStart(64, "0");
+  const paddedTo = token.toLowerCase().replace("0x", "").padStart(64, "0");
   const paddedAmount = amount.toString(16).padStart(64, "0");
   return `0x${selector.slice(2)}${paddedTo}${paddedAmount}` as `0x${string}`;
 }

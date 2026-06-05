@@ -12,6 +12,7 @@ export const CONTRACTS = {
     reserveStrategy: "0xFF8433711aBD603b3c9A07cfa51A4b157Ec300e9" as `0x${string}`,
     functionsConsumer: "0xb87Baf2131871fDA5c631873618647bEbB87e367" as `0x${string}`,
     agentIdentity: "0x0000000000000000000000000000000000000000" as `0x${string}`,
+    faucet: "0x0000000000000000000000000000000000000000" as `0x${string}`, // Will be updated after redeploy
     // Tokens
     usdc: "0x9384F5db5Ee68829538cebc659d3b50C6ED74ad2" as `0x${string}`,
     cusd: "0x874359877C2BF3B015C25910E0c3e1F6F9c1B6D8" as `0x${string}`,

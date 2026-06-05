@@ -16,6 +16,7 @@ import {MentoSavingsStrategy} from "../src/strategies/MentoSavingsStrategy.sol";
 import {ReserveStrategy} from "../src/strategies/ReserveStrategy.sol";
 import {DataTypes} from "../src/libraries/DataTypes.sol";
 import {SavannaAgentIdentity} from "../src/agent/SavannaAgentIdentity.sol";
+import {SavannaFaucet} from "../src/faucet/SavannaFaucet.sol";
 
 /// @title Deploy
 /// @notice Deploy script for Savanna Finance on Celo Sepolia (testnet) and Mainnet
@@ -66,6 +67,7 @@ contract Deploy is Script {
         address mentoSavingsStrategy;
         address reserveStrategy;
         address agentIdentity;
+        address faucet;
     }
 
     function run() external returns (Deployed memory deployed) {
@@ -245,6 +247,19 @@ contract Deploy is Script {
         } else {
             deployed.agentIdentity = address(0);
             console2.log("10. SavannaAgentIdentity: skipped (ERC-8004 not on testnet)");
+        }
+
+        // ============ 11. Deploy Faucet ============
+
+        SavannaFaucet faucet = new SavannaFaucet(deployer);
+        deployed.faucet = address(faucet);
+        console2.log("11. SavannaFaucet:", deployed.faucet);
+
+        // Add mock tokens to faucet (testnet)
+        if (!isMainnet) {
+            MockERC20(asset).mint(deployed.faucet, 1_000_000 * 1e6); // 1M USDC for faucet
+            faucet.addToken(asset, 100 * 1e6, 24 hours); // 100 USDC per claim, 24h cooldown
+            console2.log("=> Faucet funded with 1M USDC, 100 USDC/claim");
         }
 
         vm.stopBroadcast();
