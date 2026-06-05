@@ -22,7 +22,7 @@ import {
   Fingerprint,
   DollarSign,
 } from "lucide-react";
-import { useAuth, SignInModal } from "@/components/AuthModal";
+import { useAuth } from "@/components/AuthModal";
 import { LogoMark } from "@/components/landing/Icons";
 import { useX402Strategy } from "@/hooks/useX402Strategy";
 import { detectMiniPay } from "@/lib/minipay";
@@ -53,24 +53,36 @@ const QUICK_NOTES = [
 ] as const;
 
 /* ------------------------------------------------------------------ */
-/*  Live strategy type — no mock data used                            */
+/*  Strategy type                                                      */
 /* ------------------------------------------------------------------ */
+interface Strategy {
+  name: string;
+  protocol: string;
+  apy: number;
+  risk: string;
+  tvl: string;
+  confidence: number;
+  chain: string;
+  allocation: number;
+  color: string;
+}
 
 /* ------------------------------------------------------------------ */
 /*  AI Page                                                            */
 /* ------------------------------------------------------------------ */
 export default function AIPage() {
   const { isConnected, address } = useAccount();
-  const { isAuthed, showModal, setShowModal } = useAuth();
+  const { isAuthed, login } = useAuth();
   const { payAndAnalyze, isLoading: x402Loading, result: x402Result, error: x402Error, paymentRequired } = useX402Strategy();
 
   const [selectedTokens, setSelectedTokens] = useState<Set<string>>(new Set());
   const [riskTolerance, setRiskTolerance] = useState("Any");
   const [optimizeFor, setOptimizeFor] = useState("Balanced");
   const [notes, setNotes] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [showResults, setShowResults] = useState(false);
-  const [strategies, setStrategies] = useState<typeof MOCK_STRATEGIES | null>(null);
+  const [strategies, setStrategies] = useState<Strategy[] | null>(null);
   const isMiniPay = typeof window !== "undefined" && detectMiniPay();
 
   const toggleToken = (symbol: string) => {
@@ -128,7 +140,6 @@ export default function AIPage() {
 
   return (
     <main className="relative flex-1 mx-auto w-full max-w-5xl px-4 py-8 sm:px-6">
-      <SignInModal open={showModal} onClose={() => setShowModal(false)} />
 
       {/* Background glows */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -162,12 +173,12 @@ export default function AIPage() {
           </div>
 
           {/* Auth prompt */}
-          {isConnected && !isAuthed && (
+          {!isAuthed && (
             <div className="flex items-center gap-3 rounded-xl border border-accent/20 bg-accent-dim px-4 py-3 animate-fade-in">
               <Info className="h-4 w-4 text-accent shrink-0" />
-              <p className="text-xs text-muted-light flex-1">Sign in to run the AI assistant against live strategies.</p>
-              <button onClick={() => setShowModal(true)} className="shrink-0 rounded-lg bg-accent px-3 py-1.5 text-[11px] font-bold text-background hover:bg-accent-hover transition-colors">
-                Sign In
+              <p className="text-xs text-muted-light flex-1">Connect to run the AI assistant against live strategies.</p>
+              <button onClick={login} className="shrink-0 rounded-lg bg-accent px-3 py-1.5 text-[11px] font-bold text-background hover:bg-accent-hover transition-colors">
+                Connect
               </button>
             </div>
           )}
@@ -491,7 +502,7 @@ export default function AIPage() {
 /* ------------------------------------------------------------------ */
 /*  Strategy Card                                                      */
 /* ------------------------------------------------------------------ */
-function StrategyCard({ strategy }: { strategy: (typeof MOCK_STRATEGIES)[number] }) {
+function StrategyCard({ strategy }: { strategy: Strategy }) {
   return (
     <div className="rounded-xl border border-border bg-card p-4 transition-all hover:border-border-light hover:shadow-lg hover:shadow-accent/5 group">
       <div className="flex items-center gap-3 mb-3">

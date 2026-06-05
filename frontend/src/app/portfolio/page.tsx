@@ -24,7 +24,7 @@ import {
   Leaf,
 } from "lucide-react";
 import { useState, useEffect } from "react";
-import { useAuth, SignInModal } from "@/components/AuthModal";
+import { useAuth } from "@/components/AuthModal";
 
 /* ------------------------------------------------------------------ */
 /*  Mock XP / Quests / Leaderboard data                                */
@@ -47,7 +47,7 @@ const LEADERBOARD = [
 /* ------------------------------------------------------------------ */
 export default function PortfolioPage() {
   const { address, isConnected } = useAccount();
-  const { isAuthed, showModal, setShowModal } = useAuth();
+  const { isAuthed, login } = useAuth();
   const chainId = 11142220;
   const contracts = CONTRACTS[chainId as keyof typeof CONTRACTS];
 
@@ -118,7 +118,6 @@ export default function PortfolioPage() {
 
   return (
     <main className="relative flex-1 mx-auto w-full max-w-5xl px-4 py-8 sm:px-6">
-      <SignInModal open={showModal} onClose={() => setShowModal(false)} />
 
       {/* Background glows */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -127,12 +126,12 @@ export default function PortfolioPage() {
       </div>
 
       {/* Auth prompt */}
-      {isConnected && !isAuthed && (
+      {!isAuthed && (
         <div className="relative mb-6 flex items-center gap-3 rounded-xl border border-accent/20 bg-accent-dim px-4 py-3 animate-fade-in">
           <Info className="h-4 w-4 text-accent shrink-0" />
-          <p className="text-xs text-muted-light flex-1">Sign in to view your full portfolio, XP, and referral rewards.</p>
-          <button onClick={() => setShowModal(true)} className="shrink-0 rounded-lg bg-accent px-3 py-1.5 text-[11px] font-bold text-background hover:bg-accent-hover transition-colors">
-            Sign In
+          <p className="text-xs text-muted-light flex-1">Connect to view your full portfolio, XP, and referral rewards.</p>
+          <button onClick={login} className="shrink-0 rounded-lg bg-accent px-3 py-1.5 text-[11px] font-bold text-background hover:bg-accent-hover transition-colors">
+            Connect
           </button>
         </div>
       )}

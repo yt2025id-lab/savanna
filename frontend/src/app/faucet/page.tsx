@@ -3,7 +3,7 @@
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { useState, useEffect, useCallback } from "react";
 import { Droplets, Clock, CheckCircle2, AlertCircle, Zap, Info, ChevronRight } from "lucide-react";
-import { useAuth, SignInModal } from "@/components/AuthModal";
+import { useAuth } from "@/components/AuthModal";
 
 /* ------------------------------------------------------------------ */
 /*  Token config                                                       */
@@ -115,7 +115,7 @@ const TOKEN_ICONS: Record<string, ({ size }: { size?: number }) => React.ReactEl
 /* ------------------------------------------------------------------ */
 export default function FaucetPage() {
   const { address, isConnected } = useAccount();
-  const { isAuthed, showModal, setShowModal } = useAuth();
+  const { isAuthed, login } = useAuth();
   const [now, setNow] = useState(Date.now());
   const [totalClaimed, setTotalClaimed] = useState(0);
 
@@ -141,7 +141,6 @@ export default function FaucetPage() {
 
   return (
     <main className="relative flex-1 mx-auto w-full max-w-4xl px-4 py-8 sm:px-6">
-      <SignInModal open={showModal} onClose={() => setShowModal(false)} />
 
       {/* Background glows */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -177,18 +176,18 @@ export default function FaucetPage() {
       </div>
 
       {/* Auth prompt */}
-      {isConnected && !isAuthed && (
+      {!isAuthed && (
         <div className="relative mb-6 animate-fade-in">
           <div className="flex items-center gap-3 rounded-xl border border-accent/20 bg-accent-dim px-4 py-3">
             <Info className="h-4 w-4 text-accent shrink-0" />
             <p className="text-xs text-muted-light">
-              Sign in to claim tokens. You&apos;ll prove wallet ownership with a free off-chain signature.
+              Connect to claim test tokens. Sign in with Google, email, or your wallet.
             </p>
             <button
-              onClick={() => setShowModal(true)}
+              onClick={login}
               className="shrink-0 rounded-lg bg-accent px-3 py-1.5 text-[11px] font-bold text-background hover:bg-accent-hover transition-colors"
             >
-              Sign In
+              Connect
             </button>
           </div>
         </div>
@@ -205,6 +204,7 @@ export default function FaucetPage() {
             isAuthed={isAuthed}
             now={now}
             onClaimed={addClaimedCount}
+            onConnect={login}
           />
         ))}
       </div>
@@ -244,6 +244,7 @@ function FaucetCard({
   isAuthed,
   now,
   onClaimed,
+  onConnect,
 }: {
   token: (typeof FAUCET_TOKENS)[number];
   address: `0x${string}` | undefined;
@@ -251,6 +252,7 @@ function FaucetCard({
   isAuthed: boolean;
   now: number;
   onClaimed: () => void;
+  onConnect: () => void;
 }) {
   const cooldownEnd = address ? getCooldownEnd(token.symbol, address) : 0;
   const cooldownRemaining = cooldownEnd - now;
@@ -267,9 +269,9 @@ function FaucetCard({
 
   // Token address mapping (testnet)
   const TOKEN_ADDRESSES: Record<string, `0x${string}`> = {
-    USDC: process.env.NEXT_PUBLIC_USDC_ADDRESS || "0x9384F5db5Ee68829538cebc659d3b50C6ED74ad2",
-    cbBTC: "0x0000000000000000000000000000000000000000",
-    cbETH: "0x0000000000000000000000000000000000000000",
+    USDC: (process.env.NEXT_PUBLIC_USDC_ADDRESS || "0x9384F5db5Ee68829538cebc659d3b50C6ED74ad2") as `0x${string}`,
+    cbBTC: "0x0000000000000000000000000000000000000000" as `0x${string}`,
+    cbETH: "0x0000000000000000000000000000000000000000" as `0x${string}`,
   };
 
   useEffect(() => {
@@ -331,13 +333,9 @@ function FaucetCard({
         <div className="flex-1" />
 
         {/* Claim button */}
-        {!isConnected ? (
-          <button disabled className="w-full rounded-xl bg-card border border-border py-2.5 text-sm font-medium text-muted cursor-not-allowed">
-            Connect wallet
-          </button>
-        ) : !isAuthed ? (
-          <button disabled className="w-full rounded-xl bg-card border border-border py-2.5 text-sm font-medium text-muted cursor-not-allowed">
-            Sign in to claim
+        {!isAuthed ? (
+          <button onClick={onConnect} className="w-full rounded-xl bg-accent py-2.5 text-sm font-bold text-background hover:bg-accent-hover transition-all">
+            Connect
           </button>
         ) : isProcessing ? (
           <button disabled className="w-full rounded-xl py-2.5 text-sm font-medium text-accent animate-pulse" style={{ background: `${token.color}20` }}>

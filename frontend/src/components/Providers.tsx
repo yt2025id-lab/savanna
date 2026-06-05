@@ -1,12 +1,21 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { WagmiProvider, Hydrate } from "wagmi";
-import { config } from "@/config/wagmi";
+import { PrivyProvider } from "@privy-io/react-auth";
+import { WagmiProvider, createConfig } from "@privy-io/wagmi";
+import { celoSepolia } from "wagmi/chains";
+import { http } from "wagmi";
 import { detectMiniPay } from "@/lib/minipay";
 import { useEffect } from "react";
 
 const queryClient = new QueryClient();
+
+const wagmiConfig = createConfig({
+  chains: [celoSepolia],
+  transports: {
+    [celoSepolia.id]: http("https://celo-sepolia.gateway.tenderly.co"),
+  },
+});
 
 function MiniPayAutoConnect({ children }: { children: React.ReactNode }) {
   useEffect(() => {
@@ -19,22 +28,30 @@ function MiniPayAutoConnect({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-export function Providers({
-  children,
-  initialState,
-}: {
-  children: React.ReactNode;
-  initialState?: ReturnType<typeof config["getState"]>;
-}) {
+export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <WagmiProvider config={config}>
-      <Hydrate config={config} initialState={initialState}>
-        <QueryClientProvider client={queryClient}>
+    <PrivyProvider
+      appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID || "cm00000000000000000000000"}
+      config={{
+        loginMethods: ["google", "email", "twitter", "sms", "wallet"],
+        appearance: {
+          theme: "dark",
+          accentColor: "#C8A84B",
+          logo: "/logosavannafinance.png",
+        },
+        embeddedWallets: {
+          ethereum: { createOnLogin: "users-without-wallets" },
+          showWalletUIs: true,
+        },
+      }}
+    >
+      <QueryClientProvider client={queryClient}>
+        <WagmiProvider config={wagmiConfig}>
           <MiniPayAutoConnect>
             {children}
           </MiniPayAutoConnect>
-        </QueryClientProvider>
-      </Hydrate>
-    </WagmiProvider>
+        </WagmiProvider>
+      </QueryClientProvider>
+    </PrivyProvider>
   );
 }
