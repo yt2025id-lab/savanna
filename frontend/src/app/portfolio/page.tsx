@@ -1,6 +1,6 @@
 "use client";
 
-import { useAccount, useBalance, useReadContracts } from "wagmi";
+import { useAccount, useBalance, useReadContract } from "wagmi";
 import { CONTRACTS } from "@/config/contracts";
 import { ERC20_ABI } from "@/config/abis";
 import {
@@ -46,38 +46,31 @@ const LEADERBOARD = [
 /*  Portfolio Page                                                     */
 /* ------------------------------------------------------------------ */
 export default function PortfolioPage() {
-  const { address, isConnected } = useAccount();
+  const { address, chainId } = useAccount();
   const { isAuthed, login } = useAuth();
-  const chainId = 11142220;
-  const contracts = CONTRACTS[chainId as keyof typeof CONTRACTS];
+  const activeChainId = chainId ?? 11142220;
+  const contracts = CONTRACTS[activeChainId as keyof typeof CONTRACTS];
 
   // Native CELO balance
-  const { data: celoBalance } = useBalance({ address, chainId });
+  const { data: celoBalance } = useBalance({ address, chainId: activeChainId });
 
   // USDC ERC-20 balance
-  const { data: usdcData } = useReadContracts({
-    contracts: [
-      {
-        address: contracts?.usdc as `0x${string}` | undefined,
-        abi: ERC20_ABI,
-        functionName: "balanceOf" as const,
-        args: address ? [address] : undefined,
-        chainId,
-      },
-      {
-        address: contracts?.usdc as `0x${string}` | undefined,
-        abi: ERC20_ABI,
-        functionName: "decimals" as const,
-        chainId,
-      },
-    ],
-    allowFailure: true,
+  const { data: usdcRaw } = useReadContract({
+    address: contracts?.usdc as `0x${string}` | undefined,
+    abi: ERC20_ABI,
+    functionName: "balanceOf",
+    args: address ? [address] : undefined,
+    chainId: activeChainId,
     query: { enabled: !!address && !!contracts?.usdc },
   });
-
-  const usdcRaw = usdcData?.[0]?.result as bigint | undefined;
-  const usdcDecimals = usdcData?.[1]?.result as number | undefined;
-  const usdcFormatted = usdcRaw && usdcDecimals ? Number(usdcRaw) / 10 ** usdcDecimals : 0;
+  const { data: usdcDecimals } = useReadContract({
+    address: contracts?.usdc as `0x${string}` | undefined,
+    abi: ERC20_ABI,
+    functionName: "decimals",
+    chainId: activeChainId,
+    query: { enabled: !!address && !!contracts?.usdc },
+  });
+  const usdcFormatted = usdcRaw && usdcDecimals ? Number(usdcRaw) / 10 ** Number(usdcDecimals) : 0;
 
   const celoDecimals = celoBalance?.decimals ?? 18;
   const celoNum = celoBalance ? Number(celoBalance.value) / 10 ** celoDecimals : 0;
