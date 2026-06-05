@@ -3,6 +3,7 @@
 import { useAccount, useBalance, useReadContract } from "wagmi";
 import { CONTRACTS } from "@/config/contracts";
 import { ERC20_ABI } from "@/config/abis";
+import { useEffect } from "react";
 import {
   Wallet,
   TrendingUp,
@@ -55,22 +56,28 @@ export default function PortfolioPage() {
   const { data: celoBalance } = useBalance({ address, chainId: activeChainId });
 
   // USDC ERC-20 balance
-  const { data: usdcRaw } = useReadContract({
+  const enabled = !!address && !!contracts?.usdc;
+  const { data: usdcRaw, error: usdcError } = useReadContract({
     address: contracts?.usdc as `0x${string}` | undefined,
     abi: ERC20_ABI,
     functionName: "balanceOf",
     args: address ? [address] : undefined,
-    chainId: activeChainId,
-    query: { enabled: !!address && !!contracts?.usdc },
+    query: { enabled },
   });
   const { data: usdcDecimals } = useReadContract({
     address: contracts?.usdc as `0x${string}` | undefined,
     abi: ERC20_ABI,
     functionName: "decimals",
-    chainId: activeChainId,
-    query: { enabled: !!address && !!contracts?.usdc },
+    query: { enabled },
   });
   const usdcFormatted = usdcRaw && usdcDecimals ? Number(usdcRaw) / 10 ** Number(usdcDecimals) : 0;
+
+  // Debug logging
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      console.log({ address, contracts_usdc: contracts?.usdc, usdcRaw, usdcDecimals, usdcError, activeChainId });
+    }
+  }, [address, contracts?.usdc, usdcRaw, usdcDecimals, usdcError, activeChainId]);
 
   const celoDecimals = celoBalance?.decimals ?? 18;
   const celoNum = celoBalance ? Number(celoBalance.value) / 10 ** celoDecimals : 0;
