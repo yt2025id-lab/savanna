@@ -3,7 +3,6 @@
 import { useAccount, useBalance, useReadContract } from "wagmi";
 import { CONTRACTS } from "@/config/contracts";
 import { ERC20_ABI } from "@/config/abis";
-import { useEffect } from "react";
 import {
   Wallet,
   TrendingUp,
