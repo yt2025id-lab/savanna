@@ -177,6 +177,9 @@ contract SavannaVault is ERC4626, Ownable, ISavannaVault, ReentrancyGuard, Pausa
     }
 
     /// @notice Override deposit to include pause check and events
+    /// @dev Handles CIP-64 fee abstraction: if user pays gas in vault asset,
+    ///      their balance may be lower by the gas cost when transferFrom executes.
+    ///      We cap the deposit to the actual available balance.
     function deposit(uint256 assets, address receiver)
         public
         override
@@ -187,9 +190,15 @@ contract SavannaVault is ERC4626, Ownable, ISavannaVault, ReentrancyGuard, Pausa
         if (assets < minDeposit) {
             revert Errors.Savanna__InsufficientDeposit(assets, minDeposit);
         }
+        uint256 preBalance = IERC20(asset()).balanceOf(msg.sender);
+        uint256 safeAssets = assets > preBalance ? preBalance : assets;
+        if (safeAssets == 0) revert Errors.Savanna__InsufficientDeposit(0, minDeposit);
+        if (safeAssets < minDeposit) {
+            revert Errors.Savanna__InsufficientDeposit(safeAssets, minDeposit);
+        }
 
-        shares = super.deposit(assets, receiver);
-        emit Deposited(receiver, assets, shares);
+        shares = super.deposit(safeAssets, receiver);
+        emit Deposited(receiver, safeAssets, shares);
     }
 
     /// @notice Deposit with MiniPay reduced minimum (for detected MiniPay wallet users)
@@ -209,12 +218,18 @@ contract SavannaVault is ERC4626, Ownable, ISavannaVault, ReentrancyGuard, Pausa
         if (assets < minipayMinDeposit) {
             revert Errors.Savanna__InsufficientDeposit(assets, minipayMinDeposit);
         }
+        uint256 preBalance = IERC20(asset()).balanceOf(msg.sender);
+        uint256 safeAssets = assets > preBalance ? preBalance : assets;
+        if (safeAssets == 0) revert Errors.Savanna__InsufficientDeposit(0, minipayMinDeposit);
+        if (safeAssets < minipayMinDeposit) {
+            revert Errors.Savanna__InsufficientDeposit(safeAssets, minipayMinDeposit);
+        }
 
-        shares = super.deposit(assets, receiver);
-        totalMinipayDeposits += assets;
+        shares = super.deposit(safeAssets, receiver);
+        totalMinipayDeposits += safeAssets;
         minipayDepositCount++;
-        emit Deposited(receiver, assets, shares);
-        emit MinipayDeposit(receiver, assets, shares);
+        emit Deposited(receiver, safeAssets, shares);
+        emit MinipayDeposit(receiver, safeAssets, shares);
     }
     /// @dev Called by the authorized CrossChainReceiver after bridging
     /// @param assets Amount of vault asset to deposit
@@ -512,6 +527,27 @@ contract SavannaVault is ERC4626, Ownable, ISavannaVault, ReentrancyGuard, Pausa
     function maxMint(address) public view override returns (uint256) {
         if (paused()) return 0;
         return type(uint256).max;
+    }
+
+    /// @notice Get max withdrawable assets — limited by vault's idle balance if no active strategy
+    function maxWithdraw(address owner) public view override returns (uint256) {
+        if (paused()) return 0;
+        uint256 userAssets = convertToAssets(balanceOf(owner));
+        DataTypes.UserPosition memory pos = _positions[owner];
+        if (pos.isActive) return userAssets;
+        uint256 idleBalance = IERC20(asset()).balanceOf(address(this));
+        return userAssets > idleBalance ? idleBalance : userAssets;
+    }
+
+    /// @notice Get max redeemable shares — limited by vault's idle balance if no active strategy
+    function maxRedeem(address owner) public view override returns (uint256) {
+        if (paused()) return 0;
+        uint256 userShares = balanceOf(owner);
+        DataTypes.UserPosition memory pos = _positions[owner];
+        if (pos.isActive) return userShares;
+        uint256 idleBalance = IERC20(asset()).balanceOf(address(this));
+        uint256 maxSharesFromIdle = convertToShares(idleBalance);
+        return userShares > maxSharesFromIdle ? maxSharesFromIdle : userShares;
     }
 
     // ============ Chainlink Automation ============

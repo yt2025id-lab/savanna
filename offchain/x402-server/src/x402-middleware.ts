@@ -1,12 +1,12 @@
+import type { Request, Response, NextFunction } from "express";
+import { ethers } from "ethers";
+
 export interface PaymentConfig {
   usdcAddress: string;
-  usdmAddress: string;
-  usdtAddress: string;
+  vaultAddress: string;
   chainId: number;
   priceUSDC: string;
-  priceUSDM: string;
-  thirdwebSecretKey: string;
-  facilitatorUrl: string;
+  rpcUrl: string;
 }
 
 interface PaymentRequirement {
@@ -15,8 +15,10 @@ interface PaymentRequirement {
   price: string;
   currency: string;
   chainId: number;
-  recipient?: string;
+  recipient: string;
 }
+
+const ERC20_TRANSFER_TOPIC = ethers.id("Transfer(address,address,uint256)");
 
 function build402Response(config: PaymentConfig): PaymentRequirement {
   return {
@@ -25,82 +27,91 @@ function build402Response(config: PaymentConfig): PaymentRequirement {
     price: config.priceUSDC,
     currency: config.usdcAddress,
     chainId: config.chainId,
+    recipient: config.vaultAddress,
   };
 }
 
-async function verifyPayment(
-  paymentHeader: string,
+async function verifyPaymentOnChain(
+  txHash: string,
+  expectedPayer: string,
   config: PaymentConfig
-): Promise<{ valid: boolean; payer?: string; amount?: string; currency?: string; txHash?: string }> {
+): Promise<{ valid: boolean; payer?: string; amount?: string }> {
   try {
-    const parts = paymentHeader.split(",");
-    if (parts.length < 3) return { valid: false };
+    const provider = new ethers.JsonRpcProvider(config.rpcUrl);
+    const receipt = await provider.getTransactionReceipt(txHash);
+    if (!receipt || !receipt.status) return { valid: false };
 
-    const signaturePart = parts.find((p) => p.trim().startsWith("signature="));
-    const amountPart = parts.find((p) => p.trim().startsWith("amount="));
-    const currencyPart = parts.find((p) => p.trim().startsWith("currency="));
+    const usdcAddr = config.usdcAddress.toLowerCase();
+    const vaultAddr = config.vaultAddress.toLowerCase();
+    const price = BigInt(config.priceUSDC);
 
-    if (!signaturePart || !amountPart || !currencyPart) return { valid: false };
+    for (const log of receipt.logs) {
+      if (
+        log.address.toLowerCase() !== usdcAddr ||
+        log.topics[0] !== ERC20_TRANSFER_TOPIC
+      ) continue;
 
-    const amount = amountPart.split("=")[1]?.trim();
-    const currency = currencyPart.split("=")[1]?.trim();
+      const from = ethers.getAddress(ethers.dataSlice(log.topics[1], 12));
+      const to = ethers.getAddress(ethers.dataSlice(log.topics[2], 12));
 
-    const supportedTokens = [config.usdcAddress, config.usdmAddress, config.usdtAddress].map(
-      (a) => a.toLowerCase()
-    );
+      if (to.toLowerCase() !== vaultAddr) continue;
+      if (from.toLowerCase() !== expectedPayer.toLowerCase()) continue;
 
-    if (!supportedTokens.includes(currency?.toLowerCase())) {
-      return { valid: false };
+      const amount = ethers.toBigInt(log.data);
+      if (amount < price) continue;
+
+      return { valid: true, payer: from, amount: amount.toString() };
     }
 
-    const requiredAmount =
-      currency?.toLowerCase() === config.usdmAddress.toLowerCase()
-        ? config.priceUSDM
-        : config.priceUSDC;
-
-    if (!amount || BigInt(amount) < BigInt(requiredAmount)) {
-      return { valid: false };
-    }
-
-    return {
-      valid: true,
-      amount,
-      currency,
-      payer: parts.find((p) => p.trim().startsWith("payer="))?.split("=")[1]?.trim(),
-    };
+    return { valid: false };
   } catch {
     return { valid: false };
   }
 }
 
 export function x402Middleware(config: PaymentConfig) {
-  return async (
-    req: express.Request,
-    res: express.Response,
-    next: express.NextFunction
-  ) => {
-    const paymentHeader =
+  return async (req: Request, res: Response, next: NextFunction) => {
+    const header =
       req.headers["x-payment"] as string ||
       req.headers["payment-signature"] as string;
 
-    if (!paymentHeader) {
+    if (!header) {
       res.status(402).json(build402Response(config));
       return;
     }
 
-    const result = await verifyPayment(paymentHeader, config);
+    const parts = Object.fromEntries(
+      header.split(",").map((p) => {
+        const [k, ...v] = p.trim().split("=");
+        return [k, v.join("=")];
+      })
+    );
+
+    const { txHash, payer, amount, currency } = parts;
+
+    if (!txHash || !payer) {
+      res.status(402).json({ ...build402Response(config), error: "Missing txHash or payer" });
+      return;
+    }
+
+    if (currency && currency.toLowerCase() !== config.usdcAddress.toLowerCase()) {
+      res.status(402).json({ ...build402Response(config), error: "Unsupported currency" });
+      return;
+    }
+
+    const result = await verifyPaymentOnChain(txHash, payer, config);
 
     if (!result.valid) {
       res.status(402).json({
         ...build402Response(config),
-        error: "Payment verification failed",
+        error: "Payment verification failed — no valid USDC transfer found",
       });
       return;
     }
 
-    (req as any).payment = result;
+    (req as any).payment = { ...result, txHash, currency: config.usdcAddress };
     next();
   };
 }
 
-export { build402Response, verifyPayment };
+export { build402Response };

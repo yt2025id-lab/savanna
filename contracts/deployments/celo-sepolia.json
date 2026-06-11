@@ -3,16 +3,15 @@
   "chainId": 11142220,
   "deployer": "0x757DE1048723381fceB0Ddd301eFC28EeeD6760c",
   "contracts": {
-    "mockUSDC": "0x189e4f63f36a3b1af12aed9d4f03b93a09571f71",
-    "oracle": "0xdd083ebc36d4ab4a18374b7cdeb0f2c58ef5055a",
-    "vault": "0x511da92e6cc7143ceb7480d3ce3962f227158aa3",
-    "controller": "0x912bf274e2e6a69e1017e1e8ed0dc3e3d719f933",
-    "feedConsumer": "0x71cb8670abdefc6796437f568ddcef1faaecb698",
-    "crossChainReceiver": "0x0af47a3db1b4c4276fd89a295dc36dfb4dbb2c02",
-    "aaveStrategy": "0xf49c062ff27689845e1614d740a0636f2049ce9e",
-    "reserveStrategy": "0x14a25285ae30e45cf9ebc6179ba36353be980f7e",
-    "faucet": "0xc2f091f92f6911ff917f01df8560588d64951e23"
-      "faucet": "0xc2F091F92f6911Ff917F01df8560588D64951e23",
+    "mockUSDC": "0x16adcbd54e9de3c6addf47dbff855a0bf609235d",
+    "oracle": "0xf74f825bbea1de43f881ab517b9877d36c1877e4",
+    "vault": "0x9a4ba93354a49317949b71f6ccbd5b5663d3e5e4",
+    "controller": "0x87d42b986af2775b54a7fbe8e7d57e3c95010b87",
+    "feedConsumer": "0x1587bc93533d8865af05dde959534aa0b0dce7bd",
+    "crossChainReceiver": "0xf43d05991254fef9ccd005be5247e962cd4388ac",
+    "aaveStrategy": "0x69820126fb60b60597447f5405647f2e2dc76103",
+    "reserveStrategy": "0x1022bcbf6bfdc8cb9e491cd09eb39d858cb717db",
+    "faucet": "0x554c3044c32d12c59d0a5dd65e3184fff2adf8e0",
     "functionsConsumer": "0x9696ace855f66c5cea59320a3ae39904b5385c89"
   },
   "chainlinkFunctions": {
@@ -21,5 +20,5 @@
     "subscriptionId": 1,
     "note": "Set real subscriptionId after creating at https://functions.chain.link"
   },
-  "deployedAt": "2026-06-04"
+  "deployedAt": "2026-06-06"
 }

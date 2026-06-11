@@ -7,25 +7,52 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {BaseStrategy} from "./BaseStrategy.sol";
 import {Errors} from "../libraries/Errors.sol";
 
-/// @title IMoolaPool
-/// @notice Minimal interface for Moola lending protocol on Celo
-interface IMoolaPool {
-    function mint(uint256 mintAmount) external returns (uint256);
-    function redeem(uint256 redeemTokens) external returns (uint256);
-    function redeemUnderlying(uint256 redeemAmount) external returns (uint256);
-    function supplyRatePerBlock() external view returns (uint256);
-    function exchangeRateStored() external view returns (uint256);
-    function balanceOf(address owner) external view returns (uint256);
+/// @title IMoolaLendingPool
+/// @notice Minimal interface for Moola LendingPool (Aave V2 fork on Celo)
+interface IMoolaLendingPool {
+    function deposit(address asset, uint256 amount, address onBehalfOf, uint16 referralCode) external;
+    function withdraw(address asset, uint256 amount, address to) external returns (uint256);
+    function getReserveData(address asset)
+        external
+        view
+        returns (
+            uint256 configuration,
+            uint128 liquidityIndex,
+            uint128 variableBorrowIndex,
+            uint128 currentLiquidityRate,
+            uint128 currentVariableBorrowRate,
+            uint128 currentStableBorrowRate,
+            uint40 lastUpdateTimestamp,
+            address aTokenAddress,
+            address stableDebtTokenAddress,
+            address variableDebtTokenAddress,
+            address interestRateStrategyAddress,
+            uint8 id
+        );
+}
+
+/// @title IMoolaAToken
+/// @notice Minimal interface for Moola aToken (mcUSD)
+interface IMoolaAToken {
+    function balanceOf(address account) external view returns (uint256);
+    function scaledBalanceOf(address user) external view returns (uint256);
+    function POOL() external view returns (address);
+    function UNDERLYING_ASSET_ADDRESS() external view returns (address);
 }
 
 /// @title MoolaStrategy
 /// @notice Strategy adapter for Moola lending protocol on Celo
-/// @dev Deposits cUSD into Moola Market for yield (native Celo lending protocol)
+/// @dev Deposits USDm into Moola Market for yield via the LendingPool
 contract MoolaStrategy is BaseStrategy {
     using SafeERC20 for IERC20;
 
-    /// @notice Moola cToken (mToken) address
-    address public immutable MOOLA_CTOKEN;
+    /// @notice Moola LendingPool address
+    address public immutable MOOLA_POOL;
+    /// @notice Moola aToken (mcUSD) address
+    address public immutable MOOLA_ATOKEN;
+
+    uint256 private constant RAY = 1e27;
+    uint256 private constant BPS_DIVISOR = 10000;
 
     // ============ Constructor ============
 
@@ -33,46 +60,49 @@ contract MoolaStrategy is BaseStrategy {
         address asset_,
         address vault_,
         address owner_,
-        address moolaCToken_
+        address moolaPool_,
+        address moolaAToken_
     ) BaseStrategy(asset_, vault_, owner_) {
-        MOOLA_CTOKEN = moolaCToken_;
+        MOOLA_POOL = moolaPool_;
+        MOOLA_ATOKEN = moolaAToken_;
     }
 
     // ============ Strategy Info ============
 
-    /// @notice Get protocol name
     function protocolName() external pure override returns (string memory) {
         return "Moola";
     }
 
-    /// @notice Get the current APY from Moola supply rate
-    /// @dev Moola uses per-block rates, Celo has ~5s block time
+    /// @notice Get the current APY from Moola liquidity rate
+    /// @dev currentLiquidityRate is annual rate in RAY (1e27), convert to basis points
     function getApy() external view override returns (uint256) {
-        uint256 ratePerBlock = IMoolaPool(MOOLA_CTOKEN).supplyRatePerBlock();
-        // Celo block time ~5 seconds, blocks per year = 365 * 24 * 3600 / 5
-        uint256 blocksPerYear = 365 days / 5;
-        // APY ≈ ratePerBlock * blocksPerYear / 1e18 (mToken uses 18 decimals)
-        // Convert to basis points
-        uint256 apyBps = (ratePerBlock * blocksPerYear * 10000) / 1e18;
+        (, , , uint128 currentLiquidityRate, , , , , , , , ) =
+            IMoolaLendingPool(MOOLA_POOL).getReserveData(ASSET);
+
+        if (currentLiquidityRate == 0) return 0;
+
+        // currentLiquidityRate is annual rate in RAY (1e27)
+        // APY = currentLiquidityRate / RAY * BPS_DIVISOR
+        uint256 apyBps = (uint256(currentLiquidityRate) * BPS_DIVISOR) / RAY;
         return apyBps;
     }
 
     // ============ Internal Implementations ============
 
-    function _approveProtocol(address asset, uint256 amount) internal override {
-        IERC20(asset).forceApprove(MOOLA_CTOKEN, amount);
+    function _approveProtocol(address asset_, uint256 amount) internal override {
+        IERC20(asset_).forceApprove(MOOLA_POOL, amount);
     }
 
     function _depositToProtocol(address, uint256 amount) internal override {
-        try IMoolaPool(MOOLA_CTOKEN).mint(amount) returns (uint256 minted) {
-            require(minted > 0, "Moola: mint returned 0");
+        try IMoolaLendingPool(MOOLA_POOL).deposit(ASSET, amount, address(this), 0) {
+            // deposit succeeded
         } catch (bytes memory reason) {
             revert Errors.Savanna__StrategyDepositFailed(reason);
         }
     }
 
     function _withdrawFromProtocol(address, uint256 amount) internal override returns (uint256 withdrawn) {
-        try IMoolaPool(MOOLA_CTOKEN).redeemUnderlying(amount) returns (uint256 actualAmount) {
+        try IMoolaLendingPool(MOOLA_POOL).withdraw(ASSET, amount, address(this)) returns (uint256 actualAmount) {
             withdrawn = actualAmount;
         } catch (bytes memory reason) {
             revert Errors.Savanna__StrategyWithdrawFailed(reason);
@@ -80,9 +110,6 @@ contract MoolaStrategy is BaseStrategy {
     }
 
     function _getProtocolBalance(address) internal view override returns (uint256) {
-        uint256 cTokenBalance = IMoolaPool(MOOLA_CTOKEN).balanceOf(address(this));
-        uint256 exchangeRate = IMoolaPool(MOOLA_CTOKEN).exchangeRateStored();
-        // underlying = cTokenBalance * exchangeRate / 1e18
-        return (cTokenBalance * exchangeRate) / 1e18;
+        return IMoolaAToken(MOOLA_ATOKEN).balanceOf(address(this));
     }
 }

@@ -3,7 +3,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { PrivyProvider } from "@privy-io/react-auth";
 import { WagmiProvider, createConfig } from "@privy-io/wagmi";
-import { celoSepolia } from "wagmi/chains";
+import { celoSepolia, celo } from "wagmi/chains";
 import { http } from "wagmi";
 import { detectMiniPay } from "@/lib/minipay";
 import { useEffect } from "react";
@@ -11,8 +11,9 @@ import { useEffect } from "react";
 const queryClient = new QueryClient();
 
 const wagmiConfig = createConfig({
-  chains: [celoSepolia],
+  chains: [celo, celoSepolia],
   transports: {
+    [celo.id]: http("https://forno.celo.org"),
     [celoSepolia.id]: http("https://celo-sepolia.gateway.tenderly.co"),
   },
 });

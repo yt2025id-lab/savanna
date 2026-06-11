@@ -22,10 +22,8 @@ import {
   Fingerprint,
   DollarSign,
 } from "lucide-react";
-import { useAuth } from "@/components/AuthModal";
 import { LogoMark } from "@/components/landing/Icons";
 import { useX402Strategy } from "@/hooks/useX402Strategy";
-import { detectMiniPay } from "@/lib/minipay";
 
 /* ------------------------------------------------------------------ */
 /*  Token options                                                      */
@@ -72,7 +70,6 @@ interface Strategy {
 /* ------------------------------------------------------------------ */
 export default function AIPage() {
   const { isConnected, address } = useAccount();
-  const { isAuthed, login } = useAuth();
   const { payAndAnalyze, isLoading: x402Loading, result: x402Result, error: x402Error, paymentRequired } = useX402Strategy();
 
   const [selectedTokens, setSelectedTokens] = useState<Set<string>>(new Set());
@@ -83,8 +80,6 @@ export default function AIPage() {
   const [isRunning, setIsRunning] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [strategies, setStrategies] = useState<Strategy[] | null>(null);
-  const isMiniPay = typeof window !== "undefined" && detectMiniPay();
-
   const toggleToken = (symbol: string) => {
     setSelectedTokens((prev) => {
       const next = new Set(prev);
@@ -95,7 +90,7 @@ export default function AIPage() {
   };
 
   const handleRunAI = async () => {
-    if (!isAuthed || !address) return;
+    if (!address) { setError("Connect wallet first"); return; }
     setIsRunning(true);
     setShowResults(false);
     setStrategies(null);
@@ -108,9 +103,12 @@ export default function AIPage() {
       };
       const horizon = timeHorizonMap[optimizeFor] || 30 * 86400;
 
+      const tokenSymbols = selectedTokens.size > 0 ? Array.from(selectedTokens) : ["USDC"];
       const result = await payAndAnalyze({
         userAddress: address,
         timeHorizon: horizon,
+        riskPreference: riskTolerance,
+        preferredTokens: tokenSymbols,
         depositAmount: "100",
       });
 
@@ -172,14 +170,11 @@ export default function AIPage() {
             </div>
           </div>
 
-          {/* Auth prompt */}
-          {!isAuthed && (
+          {/* Wallet prompt */}
+          {!address && (
             <div className="flex items-center gap-3 rounded-xl border border-accent/20 bg-accent-dim px-4 py-3 animate-fade-in">
               <Info className="h-4 w-4 text-accent shrink-0" />
-              <p className="text-xs text-muted-light flex-1">Connect to run the AI assistant against live strategies.</p>
-              <button onClick={login} className="shrink-0 rounded-lg bg-accent px-3 py-1.5 text-[11px] font-bold text-background hover:bg-accent-hover transition-colors">
-                Connect
-              </button>
+              <p className="text-xs text-muted-light flex-1">Connect wallet to run the AI assistant against live strategies.</p>
             </div>
           )}
 
@@ -323,14 +318,14 @@ export default function AIPage() {
             )}
             <button
               onClick={handleRunAI}
-              disabled={!isAuthed || isRunning}
+              disabled={isRunning || !address}
               className={`group inline-flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-bold transition-all ${
-                !isAuthed || isRunning
+                isRunning || !address
                   ? "bg-accent-dim text-muted cursor-not-allowed"
                   : "bg-accent text-background hover:bg-accent-hover hover:shadow-lg hover:shadow-accent/20 hover:-translate-y-0.5"
               }`}
             >
-              <LogoMark size={18} color={isAuthed && !isRunning ? "#0D1A0F" : "#6B8F71"} />
+              <LogoMark size={18} color="#0D1A0F" />
               {isRunning ? "Processing…" : "Get AI Strategy"}
               {!isRunning && <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />}
             </button>
@@ -479,7 +474,7 @@ export default function AIPage() {
             </div>
             <div>
               <p className="text-xs font-semibold text-foreground">Celo L2</p>
-              <p className="text-[10px] text-muted">{isMiniPay ? "MiniPay detected — zero-click deposit" : "1-second finality · $0.001 fees"}</p>
+              <p className="text-[10px] text-muted">{"1-second finality · $0.001 fees"}</p>
             </div>
           </div>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, createContext, useContext, useCallback } from "react";
+import { useEffect, useState, createContext, useContext, useCallback, useRef } from "react";
 import { useAccount } from "wagmi";
 import { CheckCircle2, AlertCircle, X, Info } from "lucide-react";
 import { clsx } from "clsx";
@@ -30,11 +30,11 @@ export function useToast() {
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const { chainId } = useAccount();
   const [toasts, setToasts] = useState<Toast[]>([]);
-  let counter = 0;
+  const counterRef = useRef(0);
 
   const addToast = useCallback(
     (type: ToastType, message: string, txHash?: string) => {
-      const id = Date.now() + counter++;
+      const id = Date.now() + counterRef.current++;
       setToasts((prev) => [...prev, { id, type, message, txHash }]);
       setTimeout(() => {
         setToasts((prev) => prev.filter((t) => t.id !== id));

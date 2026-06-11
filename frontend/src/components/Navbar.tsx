@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAccount } from "wagmi";
 import { ConnectWallet } from "@/components/ConnectWallet";
 import { LogoMark } from "@/components/landing/Icons";
 import { Droplets, TrendingUp, Brain, Briefcase } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 
-const NAV_LINKS = [
+const ALL_NAV_LINKS = [
   { href: "/faucet", label: "Faucet", icon: Droplets },
   { href: "/earn", label: "Earn", icon: TrendingUp },
   { href: "/ai", label: "AI", icon: Brain },
@@ -16,8 +17,11 @@ const NAV_LINKS = [
 
 export function Navbar() {
   const pathname = usePathname();
+  const { chainId } = useAccount();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const isMainnet = chainId === 42220;
+  const NAV_LINKS = ALL_NAV_LINKS.filter(link => !isMainnet || link.href !== "/faucet");
 
   // Pill animation state
   const [pillStyle, setPillStyle] = useState<React.CSSProperties>({

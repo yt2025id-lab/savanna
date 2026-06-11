@@ -13,15 +13,18 @@ export function CrossChainDeposit() {
   const [bridgeStatus, setBridgeStatus] = useState<BridgeStatus>("idle");
 
   const isOnCelo = chainId === 42220 || chainId === 11142220;
+  const isMainnet = chainId === 42220;
   const destChain = isOnCelo ? chainId : LIFI_CONFIG.celoChainId;
+  const destToken = isMainnet
+    ? "0x765DE816845861e75A25fCA122bb6898B8B1282a" // cUSD (vault asset on mainnet)
+    : "0x16AdCbd54e9De3C6Addf47dbff855A0bF609235D"; // Mock USDC (testnet)
 
   // Build Jumper (LI.FI) URL with correct parameters
-  // Jumper is LI.FI's consumer-facing app that handles cross-chain swaps
   const jumperUrl = address
     ? `https://jumper.exchange/?` +
       `integrator=${LIFI_CONFIG.integrator}` +
       `&fromChain=&toChain=${destChain}` +
-      `&toToken=${LIFI_CONFIG.celoUsdc}` +
+      `&toToken=${destToken}` +
       `&toAddress=${address}`
     : "https://jumper.exchange/";
 
@@ -87,7 +90,7 @@ export function CrossChainDeposit() {
                       <div>
                         <p className="text-xs font-medium">Bridge to Celo USDC</p>
                         <p className="text-[11px] text-muted mt-0.5">
-                          Select any source chain (Ethereum, Arbitrum, Base, Polygon, etc.) and token. Destination is pre-set to Celo USDC.
+                          Select any source chain (Ethereum, Arbitrum, Base, Polygon, etc.) and token. Destination is pre-set to Celo {isMainnet ? "cUSD" : "USDC"}.
                         </p>
                       </div>
                     </div>
@@ -96,7 +99,7 @@ export function CrossChainDeposit() {
                       <div>
                         <p className="text-xs font-medium">Deposit into Savanna Vault</p>
                         <p className="text-[11px] text-muted mt-0.5">
-                          After bridging completes, come back here and deposit your USDC on Celo into the vault. AI will optimize your yield.
+                          After bridging completes, come back here and deposit your {isMainnet ? "cUSD" : "USDC"} on Celo into the vault. AI will optimize your yield.
                         </p>
                       </div>
                     </div>
@@ -107,7 +110,7 @@ export function CrossChainDeposit() {
                     <div className="flex items-center gap-2 rounded-lg border border-accent/20 bg-accent-dim p-3">
                       <CheckCircle2 className="h-4 w-4 text-accent shrink-0" />
                       <p className="text-xs text-accent font-medium">
-                        Bridge complete! Now deposit your USDC on Celo using the deposit form above.
+                        Bridge complete! Now deposit your {isMainnet ? "cUSD" : "USDC"} on Celo using the deposit form above.
                       </p>
                     </div>
                   )}
@@ -129,7 +132,7 @@ export function CrossChainDeposit() {
                     </div>
                     <div className="flex items-center justify-between mt-1">
                       <span className="text-xs text-muted">Token</span>
-                      <span className="text-xs font-medium">USDC</span>
+                      <span className="text-xs font-medium">{isMainnet ? "cUSD" : "USDC"}</span>
                     </div>
                     <div className="flex items-center justify-between mt-1">
                       <span className="text-xs text-muted">Address</span>

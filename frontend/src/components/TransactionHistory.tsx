@@ -1,11 +1,12 @@
 "use client";
 
-import { useAccount, useReadContract } from "wagmi";
+import { useAccount, useReadContract, usePublicClient } from "wagmi";
 import { formatUnits } from "viem";
-import { ArrowDownToLine, ArrowUpFromLine, Zap, Clock } from "lucide-react";
+import { ArrowDownToLine, ArrowUpFromLine, Zap, Clock, ExternalLink } from "lucide-react";
 import { clsx } from "clsx";
 import { SAVANNA_VAULT_ABI } from "@/config/abis";
-import { getContracts } from "@/config/contracts";
+import { getContracts, getTxUrl } from "@/config/contracts";
+import { useEffect, useState } from "react";
 
 interface TxEntry {
   type: "deposit" | "withdraw" | "strategy" | "pending";
@@ -18,10 +19,14 @@ interface TxEntry {
 
 export function TransactionHistory() {
   const { isConnected, address, chainId: activeChainId } = useAccount();
-  const chainId = activeChainId ?? 11142220;
+  const chainId = activeChainId ?? 42220;
+  const isMainnet = chainId === 42220;
   const contracts = getContracts(chainId);
+  const publicClient = usePublicClient({ chainId });
+  const vaultSymbol = isMainnet ? "cUSD" : "USDC";
+  const [eventEntries, setEventEntries] = useState<TxEntry[]>([]);
 
-  // Read user position for activity display
+  // Read user position
   const { data: userPosition } = useReadContract({
     address: contracts.vault,
     abi: SAVANNA_VAULT_ABI,
@@ -36,50 +41,195 @@ export function TransactionHistory() {
     args: address ? [address] : undefined,
   });
 
-  if (!isConnected || !address) return null;
-
-  // Build activity entries from on-chain position data
-  const entries: TxEntry[] = [];
-
-  const pos = userPosition as any;
-  if (pos) {
-    // If user has a deposit, show it
-    if (pos.depositAmount && pos.depositAmount > BigInt(0)) {
-      entries.push({
-        type: "deposit",
-        amount: Number(formatUnits(pos.depositAmount, 6)).toLocaleString(undefined, { maximumFractionDigits: 2 }),
-        timestamp: pos.depositTimestamp > BigInt(0)
-          ? new Date(Number(pos.depositTimestamp) * 1000).toLocaleDateString()
-          : "—",
-        status: "confirmed",
-      });
-    }
-
-    // If strategy is active
-    if (pos.isActive && pos.allocatedAmount > BigInt(0)) {
-      entries.push({
-        type: "strategy",
-        amount: Number(formatUnits(pos.allocatedAmount, 6)).toLocaleString(undefined, { maximumFractionDigits: 2 }),
-        timestamp: pos.depositTimestamp > BigInt(0)
-          ? new Date(Number(pos.depositTimestamp) * 1000).toLocaleDateString()
-          : "—",
-        status: "confirmed",
-        protocol: pos.activeStrategy !== "0x0000000000000000000000000000000000000000"
-          ? `${pos.activeStrategy.slice(0, 6)}...`
-          : undefined,
-      });
-    }
+  function fmtTimestamp(ts: number): string {
+    const d = new Date(ts);
+    return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()} ${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
   }
 
-  // If user has active request, show pending
+  // Read vault asset decimals
+  const [tokenDecimals, setTokenDecimals] = useState(6);
+  useEffect(() => {
+    if (!publicClient || !contracts.vault) return;
+    const fetchDecimals = async () => {
+      try {
+        const asset = await publicClient.readContract({
+          address: contracts.vault,
+          abi: SAVANNA_VAULT_ABI,
+          functionName: "asset",
+        });
+        const decimals = await publicClient.readContract({
+          address: asset as `0x${string}`,
+          abi: [{ type: "function", name: "decimals", inputs: [], outputs: [{ type: "uint8" }] }],
+          functionName: "decimals",
+        });
+        setTokenDecimals(Number(decimals));
+      } catch { /* keep default 6 */ }
+    };
+    fetchDecimals();
+  }, [publicClient, contracts.vault]);
+
+  // Fetch on-chain events
+  useEffect(() => {
+    if (!address || !publicClient || !contracts.vault) return;
+
+    const fetchEvents = async () => {
+      try {
+        const depositedLogs = await publicClient.getLogs({
+          address: contracts.vault,
+          event: {
+            type: "event",
+            name: "Deposited",
+            inputs: [
+              { type: "address", name: "user", indexed: true },
+              { type: "uint256", name: "amount", indexed: false },
+              { type: "uint256", name: "shares", indexed: false },
+            ],
+          },
+          args: { user: address },
+          fromBlock: BigInt(0),
+          toBlock: "latest",
+        });
+
+        const withdrawnLogs = await publicClient.getLogs({
+          address: contracts.vault,
+          event: {
+            type: "event",
+            name: "Withdrawn",
+            inputs: [
+              { type: "address", name: "user", indexed: true },
+              { type: "uint256", name: "amount", indexed: false },
+              { type: "uint256", name: "shares", indexed: false },
+            ],
+          },
+          args: { user: address },
+          fromBlock: BigInt(0),
+          toBlock: "latest",
+        });
+
+        const strategyLogs = await publicClient.getLogs({
+          address: contracts.vault,
+          event: {
+            type: "event",
+            name: "StrategyRequested",
+            inputs: [
+              { type: "address", name: "user", indexed: true },
+              { type: "uint256", name: "depositAmount", indexed: false },
+              { type: "uint256", name: "timeHorizon", indexed: false },
+              { type: "uint256", name: "timestamp", indexed: false },
+            ],
+          },
+          args: { user: address },
+          fromBlock: BigInt(0),
+          toBlock: "latest",
+        });
+
+        const allLogs = [...depositedLogs, ...withdrawnLogs, ...strategyLogs];
+        const blockCache = new Map<bigint, number>();
+        const uniqueBlocks = new Set(allLogs.map(l => l.blockNumber));
+        await Promise.all(
+          [...uniqueBlocks].map(async (bn) => {
+            try {
+              const block = await publicClient.getBlock({ blockNumber: bn });
+              blockCache.set(bn, Number(block.timestamp) * 1000);
+            } catch { /* skip */ }
+          })
+        );
+
+        const entries: TxEntry[] = [];
+
+        for (const log of depositedLogs) {
+          const { transactionHash, args, blockNumber } = log;
+          const ts = blockCache.get(blockNumber);
+          entries.push({
+            type: "deposit",
+            amount: args.amount
+              ? Number(formatUnits(args.amount, tokenDecimals)).toLocaleString(undefined, { maximumFractionDigits: 2 })
+              : "—",
+            timestamp: ts ? fmtTimestamp(ts) : "—",
+            status: "confirmed",
+            hash: transactionHash,
+          });
+        }
+
+        for (const log of withdrawnLogs) {
+          const { transactionHash, args, blockNumber } = log;
+          const ts = blockCache.get(blockNumber);
+          entries.push({
+            type: "withdraw",
+            amount: args.amount
+              ? Number(formatUnits(args.amount, tokenDecimals)).toLocaleString(undefined, { maximumFractionDigits: 2 })
+              : "—",
+            timestamp: ts ? fmtTimestamp(ts) : "—",
+            status: "confirmed",
+            hash: transactionHash,
+          });
+        }
+
+        for (const log of strategyLogs) {
+          const { transactionHash, args } = log;
+          entries.push({
+            type: "strategy",
+            amount: args.depositAmount
+              ? Number(formatUnits(args.depositAmount, tokenDecimals)).toLocaleString(undefined, { maximumFractionDigits: 2 })
+              : "—",
+            timestamp: args.timestamp
+              ? fmtTimestamp(Number(args.timestamp) * 1000)
+              : "—",
+            status: "confirmed",
+            hash: transactionHash,
+          });
+        }
+
+        setEventEntries(entries);
+      } catch {
+        // Fallback: show position-based entries
+      }
+    };
+
+    fetchEvents();
+  }, [address, publicClient, contracts.vault, tokenDecimals]);
+
+  if (!isConnected || !address) return null;
+
+  const pos = userPosition as any;
+  const positionEntries: TxEntry[] = [];
+
+  if (pos?.depositAmount && pos.depositAmount > BigInt(0)) {
+    positionEntries.push({
+      type: "deposit",
+      amount: Number(formatUnits(pos.depositAmount, tokenDecimals)).toLocaleString(undefined, { maximumFractionDigits: 2 }),
+      timestamp: pos.depositTimestamp > BigInt(0)
+        ? fmtTimestamp(Number(pos.depositTimestamp) * 1000)
+        : "—",
+      status: "confirmed",
+    });
+  }
+
+  if (pos?.isActive && pos?.allocatedAmount > BigInt(0)) {
+    positionEntries.push({
+      type: "strategy",
+      amount: Number(formatUnits(pos.allocatedAmount, tokenDecimals)).toLocaleString(undefined, { maximumFractionDigits: 2 }),
+      timestamp: pos.depositTimestamp > BigInt(0)
+        ? fmtTimestamp(Number(pos.depositTimestamp) * 1000)
+        : "—",
+      status: "confirmed",
+      protocol: pos.activeStrategy !== "0x0000000000000000000000000000000000000000"
+        ? `${pos.activeStrategy.slice(0, 6)}...`
+        : undefined,
+    });
+  }
+
   if (hasActiveRequest) {
-    entries.push({
+    positionEntries.push({
       type: "pending",
       amount: "—",
       timestamp: "Now",
       status: "pending",
     });
   }
+
+  // Use event-sourced entries if available, fall back to position-based
+  const entries = eventEntries.length > 0 ? eventEntries : positionEntries;
 
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden">
@@ -135,7 +285,20 @@ export function TransactionHistory() {
                     </span>
                   )}
                 </div>
-                <span className="text-[10px] text-muted">{tx.timestamp}</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] text-muted">{tx.timestamp}</span>
+                  {tx.hash && (
+                    <a
+                      href={getTxUrl(tx.hash, chainId)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[10px] text-accent hover:underline flex items-center gap-0.5"
+                    >
+                      {tx.hash.slice(0, 6)}...{tx.hash.slice(-4)}
+                      <ExternalLink className="h-2.5 w-2.5" />
+                    </a>
+                  )}
+                </div>
               </div>
               <div className="text-right">
                 <span
@@ -145,7 +308,7 @@ export function TransactionHistory() {
                   )}
                 >
                   {tx.type === "deposit" ? "+" : tx.type === "withdraw" ? "-" : ""}
-                  {tx.amount} USDC
+                  {tx.amount} {vaultSymbol}
                 </span>
                 <div className="text-[10px] text-muted">
                   {tx.status === "confirmed" ? "✓ Confirmed" : "⏳ Pending"}

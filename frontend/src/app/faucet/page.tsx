@@ -115,10 +115,20 @@ const TOKEN_ICONS: Record<string, ({ size }: { size?: number }) => React.ReactEl
 /*  Faucet Page                                                       */
 /* ------------------------------------------------------------------ */
 export default function FaucetPage() {
-  const { address, isConnected } = useAccount();
+  const { address, isConnected, chainId } = useAccount();
   const { isAuthed, login } = useAuth();
   const [now, setNow] = useState(Date.now());
   const [totalClaimed, setTotalClaimed] = useState(0);
+  const isMainnet = chainId === 42220;
+
+  // Redirect to Earn on mainnet (no faucet)
+  useEffect(() => {
+    if (isMainnet) {
+      window.location.href = "/earn";
+    }
+  }, [isMainnet]);
+
+  if (isMainnet) return null;
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
@@ -164,7 +174,7 @@ export default function FaucetPage() {
           <div className="flex-1">
             <h1 className="text-2xl font-bold text-foreground">Token Faucet</h1>
             <p className="text-sm text-muted-light mt-1">
-              Claim free test tokens every 24 hours to explore DeFi strategies on Celo Sepolia.
+              Claim free test tokens every 24 hours to explore DeFi strategies.
             </p>
           </div>
           {/* Stats */}
@@ -270,7 +280,7 @@ function FaucetCard({
     { name: "claim", type: "function", stateMutability: "nonpayable", inputs: [{ name: "token", type: "address" }], outputs: [] },
   ] as const;
 
-  // Token address mapping (testnet)
+  // Token address mapping
   const usdcAddress = CONTRACTS[11142220]?.usdc;
   const TOKEN_ADDRESSES: Record<string, `0x${string}`> = {
     USDC: usdcAddress as `0x${string}`,

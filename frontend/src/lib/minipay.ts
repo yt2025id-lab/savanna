@@ -55,7 +55,7 @@ export const CELO_TOKENS = {
   /** USDC (Circle) on Celo mainnet */
   usdc: "0xcebA9300f2b948710d2653dD7B07f33A8B32118C" as `0x${string}`,
   /** cUSD (Mento stablecoin) on Celo mainnet */
-  cusd: "0x765DE816845861e75A25fCA1227689AB8A8B1f84" as `0x${string}`,
+  cusd: "0x765DE816845861e75A25fCA122bb6898B8B1282a" as `0x${string}`,
   /** cEUR (Mento stablecoin) on Celo mainnet */
   ceur: "0xD8763CBa276a3738E6DE85Ad4eA6202C29B19080" as `0x${string}`,
   /** CELO native token (wrapped) */
@@ -159,7 +159,7 @@ export function getX402Config(chainId?: number) {
       : "https://savanna-x402.onrender.com/api/strategy/analyze"),
     price: process.env.NEXT_PUBLIC_X402_PRICE || "100000",
     currency: (isTestnet
-      ? "0x9384F5db5Ee68829538cebc659d3b50C6ED74ad2"  // testnet USDC
+      ? "0x189e4f63f36a3b1af12aed9d4f03b93a09571f71"  // testnet USDC (Mock)
       : "0xcebA9300f2b948710d2653dD7B07f33A8B32118C"   // mainnet USDC
     ) as `0x${string}`,
     chainId: isTestnet ? 11142220 : 42220,
@@ -169,8 +169,6 @@ export function getX402Config(chainId?: number) {
     ) as `0x${string}`,
   } as const;
 }
-
-export const X402_CONFIG = getX402Config(11142220);
 
 /**
  * Build x402 payment header value for a strategy request.
@@ -200,6 +198,7 @@ export function parseX402Requirement(body: any): {
   currency: string;
   chainId: number;
   scheme: string;
+  recipient: string;
 } | null {
   if (!body || body.error !== "Payment Required") return null;
   return {
@@ -207,6 +206,7 @@ export function parseX402Requirement(body: any): {
     currency: body.currency,
     chainId: body.chainId,
     scheme: body.scheme,
+    recipient: body.recipient,
   };
 }
 

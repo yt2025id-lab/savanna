@@ -1,37 +1,51 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from "wagmi";
 import { parseUnits, formatUnits } from "viem";
 import { SAVANNA_VAULT_ABI, ERC20_ABI } from "@/config/abis";
 import { getContracts } from "@/config/contracts";
 import { useVaultData } from "@/hooks/useVaultData";
-import { ArrowDownToLine, AlertCircle, Loader2, CheckCircle2, Sparkles } from "lucide-react";
+import { LiFiSwapCard } from "@/components/lifi/LiFiSwapCard";
+import { CrossChainDeposit } from "@/components/CrossChainDeposit";
+import { ArrowDownToLine, AlertCircle, Loader2, CheckCircle2, Sparkles, Zap, RefreshCw } from "lucide-react";
 import clsx from "clsx";
 
-const ASSETS = [
-  { symbol: "USDC", label: "USD Coin", decimals: 6 },
-  // { symbol: "cUSD", label: "Celo Dollar", decimals: 18 },
+const TESTNET_ASSETS = [
+  { symbol: "USDC", label: "USD Coin", decimals: 6, token: "usdc" as const },
 ] as const;
 
-type AssetSymbol = (typeof ASSETS)[number]["symbol"];
+const MAINNET_ASSETS = [
+  { symbol: "cUSD", label: "Celo Dollar", decimals: 18, token: "cusd" as const },
+] as const;
+
+const ASSETS = {
+  testnet: TESTNET_ASSETS,
+  mainnet: MAINNET_ASSETS,
+} as const;
+
+type AssetSymbol = "USDC" | "cUSD";
 
 export function DepositCard() {
   const { address, chainId: activeChainId } = useAccount();
-  const chainId = activeChainId ?? 11142220;
+  const chainId = activeChainId ?? 42220;
+  const isMainnet = chainId === 42220;
   const contracts = getContracts(chainId);
   const { tokenBalance, tokenDecimals, tokenSymbol, allowance, userTokenBalanceFormatted } = useVaultData();
 
-  const [selectedAsset, setSelectedAsset] = useState<AssetSymbol>("USDC");
+  const assetsList = isMainnet ? ASSETS.mainnet : ASSETS.testnet;
+  const [selectedAsset, setSelectedAsset] = useState<AssetSymbol>(isMainnet ? "cUSD" : "USDC");
   const [amount, setAmount] = useState("");
-  const [step, setStep] = useState<"idle" | "approving" | "depositing" | "done" | "error">("idle");
+  const [step, setStep] = useState<"idle" | "approving" | "depositing" | "strategizing" | "done" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
 
-  const asset = ASSETS.find((a) => a.symbol === selectedAsset)!;
+  const asset = assetsList.find((a) => a.symbol === selectedAsset)!;
+  const tokenKey = asset?.token ?? "usdc";
+  const tokenAddress = contracts[tokenKey] as `0x${string}`;
 
   // Token allowance
   const { data: currentAllowance } = useReadContract({
-    address: contracts.usdc,
+    address: tokenAddress,
     abi: ERC20_ABI,
     functionName: "allowance",
     args: address ? [address, contracts.vault] : undefined,
@@ -57,18 +71,69 @@ export function DepositCard() {
     query: { enabled: !!approveHash },
   });
 
-  // Wait for deposit tx
+  // Strategy request write (needed to set _activeRequests flag on vault)
+  const {
+    writeContract: requestStrategy,
+    data: strategyHash,
+    isPending: strategyPending,
+  } = useWriteContract();
+
+  // Wait for strategy request tx
+  const { isLoading: strategyConfirming, isSuccess: strategySuccess } = useWaitForTransactionReceipt({
+    hash: strategyHash,
+    query: { enabled: !!strategyHash },
+  });
+
+  // Handle deposit tx
   const { isLoading: depositConfirming, isSuccess: depositSuccess } = useWaitForTransactionReceipt({
     hash: depositHash,
     query: { enabled: !!depositHash },
   });
 
-  // Handle deposit success
-  if (depositSuccess && step === "depositing") {
-    setStep("done");
-    setAmount("");
-    setTimeout(() => setStep("idle"), 3000);
-  }
+  // Step 1: Deposit success → call requestStrategy to set _activeRequests flag
+  useEffect(() => {
+    if (depositSuccess && step === "depositing" && address) {
+      setStep("strategizing");
+      setAmount("");
+      requestStrategy({
+        address: contracts.vault,
+        abi: SAVANNA_VAULT_ABI,
+        functionName: "requestStrategy",
+        args: [BigInt(30 * 24 * 60 * 60)],
+      });
+    }
+  }, [depositSuccess]);
+
+  // Step 2: requestStrategy success → call x402 backend to fulfill on-chain
+  useEffect(() => {
+    if (strategySuccess && step === "strategizing" && address) {
+      const x402Base = (process.env.NEXT_PUBLIC_X402_ENDPOINT || "http://localhost:3001/api/strategy/analyze").replace(/\/analyze$/, "");
+
+      fetch(`${x402Base}/fulfill`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userAddress: address,
+          timeHorizon: 30 * 24 * 60 * 60,
+        }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success) {
+            setStep("done");
+            const timer = setTimeout(() => setStep("idle"), 6000);
+            return () => clearTimeout(timer);
+          } else {
+            setErrorMsg(data.error || "Strategy fulfillment failed");
+            setStep("error");
+          }
+        })
+        .catch((err) => {
+          setErrorMsg(err.message || "Failed to call AI strategy");
+          setStep("error");
+        });
+    }
+  }, [strategySuccess, address]);
 
   const parsedAmount = amount && !isNaN(Number(amount))
     ? parseUnits(amount, asset.decimals)
@@ -83,7 +148,7 @@ export function DepositCard() {
     setStep("approving");
     approve(
       {
-        address: contracts.usdc,
+        address: tokenAddress,
         abi: ERC20_ABI,
         functionName: "approve",
         args: [contracts.vault, parsedAmount],
@@ -124,12 +189,12 @@ export function DepositCard() {
 
   const handleSetMax = () => {
     if (tokenBalance) {
-      const formatted = formatUnits(tokenBalance, selectedAsset === "USDC" ? tokenDecimals : 18);
-      setAmount(parseFloat(formatted).toFixed(selectedAsset === "USDC" ? 2 : 4));
+      const formatted = formatUnits(tokenBalance, asset.decimals);
+      setAmount(parseFloat(formatted).toFixed(asset.decimals === 6 ? 2 : 4));
     }
   };
 
-  const isBusy = step === "approving" || step === "depositing" || approvePending || depositPending || approveConfirming || depositConfirming;
+  const isBusy = step === "approving" || step === "depositing" || step === "strategizing" || approvePending || depositPending || approveConfirming || depositConfirming || strategyPending || strategyConfirming;
 
   return (
     <div className="rounded-2xl border border-border bg-card overflow-hidden">
@@ -144,10 +209,10 @@ export function DepositCard() {
         <div>
           <label className="text-xs text-muted mb-1.5 block">Select Asset</label>
           <div className="flex gap-2">
-            {ASSETS.map((a) => (
+            {assetsList.map((a) => (
               <button
                 key={a.symbol}
-                onClick={() => { setSelectedAsset(a.symbol); setAmount(""); }}
+                onClick={() => { setSelectedAsset(a.symbol as AssetSymbol); setAmount(""); }}
                 className={clsx(
                   "flex-1 py-2 rounded-lg text-sm font-medium transition-all border",
                   selectedAsset === a.symbol
@@ -236,10 +301,15 @@ export function DepositCard() {
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Depositing...
                 </span>
+              ) : step === "strategizing" ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Zap className="h-4 w-4 animate-pulse" />
+                  AI Optimizing Yield...
+                </span>
               ) : step === "done" ? (
                 <span className="flex items-center justify-center gap-2">
                   <CheckCircle2 className="h-4 w-4" />
-                  Deposited!
+                  Deposited &amp; Optimizing!
                 </span>
               ) : (
                 "Deposit"
@@ -257,24 +327,10 @@ export function DepositCard() {
         )}
       </div>
 
-      {/* Cross-chain shortcut */}
-      <div className="border-t border-border px-5 py-4">
-        <a
-          href="#"
-          onClick={(e) => {
-            e.preventDefault();
-            // Scroll to cross-chain section
-            const el = document.querySelector("[data-cross-chain-deposit]");
-            el?.scrollIntoView({ behavior: "smooth", block: "center" });
-          }}
-          className="flex items-center justify-center gap-2 rounded-xl bg-accent-dim/50 border border-dashed border-accent/20 py-4 transition-all hover:border-accent/40 hover:bg-accent-dim cursor-pointer"
-        >
-          <span className="text-lg">🌉</span>
-          <div className="text-center">
-            <p className="text-sm text-muted-light">Bridge from another chain</p>
-            <p className="text-[10px] text-muted mt-0.5">via LI.FI — 60+ chains supported</p>
-          </div>
-        </a>
+      {/* Quick actions */}
+      <div className="border-t border-border px-5 py-4 space-y-3">
+        <LiFiSwapCard />
+        <CrossChainDeposit />
       </div>
     </div>
   );

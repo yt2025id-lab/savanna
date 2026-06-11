@@ -1,23 +1,29 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
-import { formatUnits } from "viem";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from "wagmi";
+import { formatUnits, parseUnits } from "viem";
 import { SAVANNA_VAULT_ABI, SAVANNA_CONTROLLER_ABI } from "@/config/abis";
 import { getContracts } from "@/config/contracts";
 import { useVaultData } from "@/hooks/useVaultData";
-import { ListChecks, Loader2, AlertCircle, CheckCircle2, ArrowUpFromLine, AlertTriangle } from "lucide-react";
+import { ListChecks, Loader2, AlertCircle, CheckCircle2, ArrowUpFromLine, AlertTriangle, Wallet } from "lucide-react";
 import clsx from "clsx";
+
+type WithdrawStep = "idle" | "strategyWithdraw" | "vaultWithdraw" | "done";
 
 export function ActivePositions() {
   const { address, chainId: activeChainId } = useAccount();
-  const chainId = activeChainId ?? 11142220;
+  const chainId = activeChainId ?? 42220;
   const contracts = getContracts(chainId);
   const { userShares, sharesInAssets, userPosition, tokenDecimals, isLoading, tokenSymbol } = useVaultData();
 
-  const [withdrawing, setWithdrawing] = useState(false);
+  const [step, setStep] = useState<WithdrawStep>("idle");
   const [errorMsg, setErrorMsg] = useState("");
-  const [done, setDone] = useState(false);
+  const [withdrawAmount, setWithdrawAmount] = useState("");
+  const stepRef = useRef(step);
+  const withdrawAmountRef = useRef(withdrawAmount);
+  stepRef.current = step;
+  withdrawAmountRef.current = withdrawAmount;
 
   // Withdraw from vault (ERC-4626)
   const {
@@ -43,45 +49,90 @@ export function ActivePositions() {
     query: { enabled: !!withdrawStrategyHash },
   });
 
-  if (withdrawSuccess && withdrawing) {
-    setWithdrawing(false);
-    setDone(true);
-    setTimeout(() => setDone(false), 3000);
-  }
+  // Read max withdrawable (capped by idle balance if no active strategy)
+  const { data: maxWithdrawRaw } = useReadContract({
+    address: contracts.vault,
+    abi: SAVANNA_VAULT_ABI,
+    functionName: "maxWithdraw",
+    args: address ? [address] : undefined,
+  });
+  const maxWithdraw = maxWithdrawRaw as bigint | undefined;
 
-  if (withdrawStrategySuccess && withdrawing) {
-    setWithdrawing(false);
-    setDone(true);
-    setTimeout(() => setDone(false), 3000);
-  }
+  // After strategy withdraw confirms, auto-trigger vault withdraw
+  useEffect(() => {
+    if (withdrawStrategySuccess && stepRef.current === "strategyWithdraw") {
+      setStep("vaultWithdraw");
+      const timer = setTimeout(() => {
+        if (!address || !sharesInAssets) return;
+        const amtStr = withdrawAmountRef.current;
+        const maxAmt = maxWithdraw && maxWithdraw < sharesInAssets ? maxWithdraw : sharesInAssets;
+        const chosen = amtStr && !isNaN(Number(amtStr)) && Number(amtStr) > 0
+          ? parseUnits(amtStr, tokenDecimals)
+          : maxAmt;
+        if (!chosen || chosen === BigInt(0)) return;
+        if (chosen > maxAmt) return;
+        withdrawWrite(
+          {
+            address: contracts.vault,
+            abi: SAVANNA_VAULT_ABI,
+            functionName: "withdraw",
+            args: [chosen, address, address],
+          },
+          {
+            onError: (err) => {
+              setErrorMsg(err.message.slice(0, 120));
+              setStep("idle");
+            },
+          },
+        );
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [withdrawStrategySuccess, address, sharesInAssets, maxWithdraw, tokenDecimals, contracts, withdrawWrite]);
 
-  // Withdraw from vault — only works if no active strategy
+  // After vault withdraw confirms
+  useEffect(() => {
+    if (withdrawSuccess && stepRef.current === "vaultWithdraw") {
+      setStep("done");
+      const timer = setTimeout(() => setStep("idle"), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [withdrawSuccess]);
+
   const handleWithdraw = useCallback(() => {
-    if (!address || !sharesInAssets) return;
+    if (!address) return;
+    const maxAmt = maxWithdraw && sharesInAssets
+      ? (maxWithdraw < sharesInAssets ? maxWithdraw : sharesInAssets)
+      : sharesInAssets;
+    if (!maxAmt || maxAmt === BigInt(0)) return;
+    const amtStr = withdrawAmountRef.current;
+    const chosen = amtStr && !isNaN(Number(amtStr)) && Number(amtStr) > 0
+      ? parseUnits(amtStr, tokenDecimals)
+      : maxAmt;
+    if (!chosen || chosen === BigInt(0)) return;
+    if (chosen > maxAmt) { setErrorMsg("Amount exceeds available balance"); return; }
     setErrorMsg("");
-    setWithdrawing(true);
+    setStep("vaultWithdraw");
     withdrawWrite(
       {
         address: contracts.vault,
         abi: SAVANNA_VAULT_ABI,
         functionName: "withdraw",
-        args: [sharesInAssets, address, address],
+        args: [chosen, address, address],
       },
       {
-        onSuccess: () => {},
         onError: (err) => {
           setErrorMsg(err.message.slice(0, 120));
-          setWithdrawing(false);
+          setStep("idle");
         },
       },
     );
-  }, [address, sharesInAssets, contracts, withdrawWrite]);
+  }, [address, sharesInAssets, maxWithdraw, tokenDecimals, contracts, withdrawWrite]);
 
-  // Withdraw from strategy first, then vault
   const handleWithdrawFromStrategy = useCallback(() => {
     if (!address) return;
     setErrorMsg("");
-    setWithdrawing(true);
+    setStep("strategyWithdraw");
     withdrawStrategyWrite(
       {
         address: contracts.controller,
@@ -90,10 +141,9 @@ export function ActivePositions() {
         args: [address],
       },
       {
-        onSuccess: () => {},
         onError: (err) => {
           setErrorMsg(err.message.slice(0, 120));
-          setWithdrawing(false);
+          setStep("idle");
         },
       },
     );
@@ -102,8 +152,7 @@ export function ActivePositions() {
   const hasPosition = userShares && userShares > BigInt(0);
   const isActive = userPosition?.isActive;
 
-  // Format helpers
-  const fmt = (val: bigint | undefined) => {
+  const fmt = (val: bigint | undefined | null) => {
     if (!val) return "0.00";
     return (Number(formatUnits(val, tokenDecimals))).toLocaleString(undefined, {
       minimumFractionDigits: 2,
@@ -111,13 +160,12 @@ export function ActivePositions() {
     });
   };
 
-  // Calculate earnings
   const earningsValue = sharesInAssets && userPosition?.depositAmount
     ? (Number(formatUnits(sharesInAssets, tokenDecimals)) -
        Number(formatUnits(userPosition.depositAmount, tokenDecimals)))
     : 0;
 
-  const isBusy = withdrawing || withdrawPending || withdrawConfirming || withdrawStrategyPending || withdrawStrategyConfirming;
+  const isBusy = step === "strategyWithdraw" || step === "vaultWithdraw";
 
   return (
     <div className="rounded-2xl border border-border bg-card overflow-hidden">
@@ -189,13 +237,48 @@ export function ActivePositions() {
                 </div>
               )}
 
+              {/* Withdraw amount input */}
+              {step !== "done" && !isBusy && (
+                <div className="mb-3">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs text-muted">Withdraw Amount</label>
+                    <button
+                      onClick={() => {
+                        const maxAmt = maxWithdraw && sharesInAssets
+                          ? (maxWithdraw < sharesInAssets ? maxWithdraw : sharesInAssets)
+                          : sharesInAssets;
+                        if (maxAmt) setWithdrawAmount(formatUnits(maxAmt, tokenDecimals));
+                      }}
+                      className="text-xs text-accent hover:underline cursor-pointer"
+                    >
+                      Max: {fmt(maxWithdraw && sharesInAssets
+                        ? (maxWithdraw < sharesInAssets ? maxWithdraw : sharesInAssets)
+                        : sharesInAssets)}
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      placeholder="0.00"
+                      value={withdrawAmount}
+                      onChange={(e) => { setWithdrawAmount(e.target.value); setErrorMsg(""); }}
+                      className="w-full bg-background border border-border rounded-xl px-4 py-2.5 pr-14 text-base text-foreground placeholder-muted/50 focus:outline-none focus:border-accent/40 transition-colors"
+                      disabled={isBusy}
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-accent">
+                      {tokenSymbol}
+                    </span>
+                  </div>
+                </div>
+              )}
+
               {/* Withdraw button */}
               <button
                 onClick={isActive ? handleWithdrawFromStrategy : handleWithdraw}
                 disabled={isBusy || !sharesInAssets}
                 className={clsx(
                   "w-full py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 cursor-pointer",
-                  done
+                  step === "done"
                     ? "bg-accent-dim text-accent border border-accent/30"
                     : isBusy
                     ? "bg-card text-accent/50 cursor-wait"
@@ -204,15 +287,25 @@ export function ActivePositions() {
                     : "bg-card text-accent border border-border hover:border-accent/30 hover:bg-card-hover"
                 )}
               >
-                {done ? (
+                {step === "done" ? (
                   <>
                     <CheckCircle2 className="h-4 w-4" />
                     Withdrawn!
                   </>
-                ) : isBusy ? (
+                ) : step === "strategyWithdraw" ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    {isActive ? "Withdrawing from strategy..." : "Withdrawing..."}
+                    Withdrawing from strategy...
+                  </>
+                ) : step === "vaultWithdraw" && !isActive ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Withdrawing...
+                  </>
+                ) : step === "vaultWithdraw" ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Completing withdrawal...
                   </>
                 ) : (
                   <>

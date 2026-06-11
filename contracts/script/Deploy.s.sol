@@ -12,7 +12,7 @@ import {SavannaController} from "../src/controller/SavannaController.sol";
 import {SavannaFeedConsumer} from "../src/feeds/SavannaFeedConsumer.sol";
 import {SavannaCrossChainReceiver} from "../src/crosschain/SavannaCrossChainReceiver.sol";
 import {AaveV3Strategy} from "../src/strategies/AaveV3Strategy.sol";
-import {MentoSavingsStrategy} from "../src/strategies/MentoSavingsStrategy.sol";
+import {MoolaStrategy} from "../src/strategies/MoolaStrategy.sol";
 import {ReserveStrategy} from "../src/strategies/ReserveStrategy.sol";
 import {DataTypes} from "../src/libraries/DataTypes.sol";
 import {SavannaAgentIdentity} from "../src/agent/SavannaAgentIdentity.sol";
@@ -35,14 +35,12 @@ contract Deploy is Script {
     address constant MAINNET_AAVE_AUSDC = 0xFF8309b9e99bfd2D4021bc71a362aBD93dBd4785;
     /// @notice USDC on Celo Mainnet (6 decimals) — Circle
     address constant MAINNET_USDC = 0xcebA9300f2b948710d2653dD7B07f33A8B32118C;
-    /// @notice USDm on Celo Mainnet (18 decimals) — Mento
+    /// @notice cUSD on Celo Mainnet (18 decimals) — Mento Dollar
     address constant MAINNET_USDM = 0x765DE816845861e75A25fCA122bb6898B8B1282a;
-    /// @notice Mento Savings cUSD (sCU) on Celo Mainnet
-    address constant MAINNET_MENTO_SAVINGS_CU = 0x2a4D787EB7e7306Ef8Bb5143C6295C5731d1B4F4;
-    /// @notice cUSD on Celo Mainnet (18 decimals) — Mento stablecoin
-    address constant MAINNET_CUSD = 0x765DE816845861e75a25fCA1227689Ab8A8B1f84;
-    /// @notice Ubeswap Router on Celo Mainnet (Uniswap V2 compatible)
-    address constant MAINNET_UBESWAP_ROUTER = 0x7ADe87e11cDD3904E7D55271C2aDA2E7A3D6fB3e;
+    /// @notice Moola LendingPool (Aave V2 fork) on Celo Mainnet
+    address constant MAINNET_MOOLA_POOL = 0x970b12522CA9b4054807a2c5B736149a5BE6f670;
+    /// @notice Moola mcUSD (aToken for USDm) on Celo Mainnet
+    address constant MAINNET_MOOLA_MCUSD = 0x918146359264C492BD6934071c6Bd31C854EDBc3;
     /// @notice Wrapped CELO on Celo Mainnet
     address constant MAINNET_WRAPPED_CELO = 0x471EcE3750Da237f93B8E339c536989b8978a438;
     /// @notice ERC-8004 Identity Registry on Celo Mainnet
@@ -87,9 +85,9 @@ contract Deploy is Script {
 
         address asset;
         if (isMainnet) {
-            // Use real USDC on Celo Mainnet
-            asset = MAINNET_USDC;
-            console2.log("1. Asset: USDC (mainnet)", asset);
+            // Use USDm (Mento Dollar) on Celo Mainnet
+            asset = MAINNET_USDM;
+            console2.log("1. Asset: USDm (mainnet)", asset);
         } else {
             // Deploy Mock USDC for testnet
             MockERC20 usdc = new MockERC20(
@@ -109,11 +107,13 @@ contract Deploy is Script {
         deployed.oracle = address(oracleContract);
         console2.log("2. SavannaOracle:", deployed.oracle);
 
-        // Register USDC asset feed in oracle (mainnet uses real Chainlink feed)
+        // Register asset feed in oracle
         if (isMainnet) {
-            oracleContract.setAssetFeed(asset, oracleContract.USDC_USD_FEED());
+            // TODO: use Chainlink USDm/USD feed if available; deploy mock for now
+            MockPriceFeed mockOracleFeed = new MockPriceFeed(int256(1e8), 8);
+            oracleContract.setAssetFeed(asset, address(mockOracleFeed));
         } else {
-            // Deploy mock price feed for testnet ($1.00 USDC)
+            // Deploy mock price feed for testnet ($1.00)
             MockPriceFeed mockOracleFeed = new MockPriceFeed(int256(1e8), 8);
             oracleContract.setAssetFeed(asset, address(mockOracleFeed));
         }
@@ -133,44 +133,42 @@ contract Deploy is Script {
 
         // ============ 5. Deploy Strategies ============
 
-        address aavePool = isMainnet ? MAINNET_AAVE_POOL : SEPOLIA_AAVE_POOL;
-        address aaveAToken = isMainnet ? MAINNET_AAVE_AUSDC : SEPOLIA_AAVE_ATOKEN;
-
-        AaveV3Strategy aaveStrategy =
-            new AaveV3Strategy(asset, deployed.vault, deployer, aavePool, aaveAToken);
-        deployed.aaveStrategy = address(aaveStrategy);
-        console2.log("5. AaveV3Strategy:", deployed.aaveStrategy);
-
-        // Moola, Compound not available on Celo per celopedia-skills review
-        // Deploy MentoSavingsStrategy for cUSD savings yield
-        address mentoSavingsToken = isMainnet
-            ? MAINNET_MENTO_SAVINGS_CU
-            : address(0); // No Mento Savings on Sepolia yet
-
-        MentoSavingsStrategy mentoSavingsStrategy;
         if (isMainnet) {
-            mentoSavingsStrategy = new MentoSavingsStrategy(
-                MAINNET_CUSD, // cUSD as asset
-                deployed.vault,
-                deployer,
-                mentoSavingsToken
+            // Mainnet: deploy Moola (USDm) + Reserve
+            // Skip AaveV3 (uses USDC, not USDm) and MentoSavings (deprecated)
+
+            MoolaStrategy moolaStrategy = new MoolaStrategy(
+                asset, deployed.vault, deployer, MAINNET_MOOLA_POOL, MAINNET_MOOLA_MCUSD
             );
-            deployed.mentoSavingsStrategy = address(mentoSavingsStrategy);
-            console2.log("6. MentoSavingsStrategy:", deployed.mentoSavingsStrategy);
+            deployed.aaveStrategy = address(0); // not used
+            deployed.mentoSavingsStrategy = address(0); // not used
+            deployed.moolaStrategy = address(moolaStrategy);
+            console2.log("5. MoolaStrategy:", deployed.moolaStrategy);
         } else {
+            // Testnet: deploy AaveV3 (mock) + MentoSavings (placeholder) + Reserve
+            address aavePool = SEPOLIA_AAVE_POOL;
+            address aaveAToken = SEPOLIA_AAVE_ATOKEN;
+
+            AaveV3Strategy aaveStrategy =
+                new AaveV3Strategy(asset, deployed.vault, deployer, aavePool, aaveAToken);
+            deployed.aaveStrategy = address(aaveStrategy);
+            console2.log("5. AaveV3Strategy:", deployed.aaveStrategy);
+
+            deployed.moolaStrategy = address(0);
             deployed.mentoSavingsStrategy = address(0);
-            console2.log("6. MentoSavingsStrategy: skipped (not on testnet)");
+            console2.log("6. MoolaStrategy: skipped (not on testnet)");
         }
 
-        // Using ReserveStrategy as fallback alongside Aave
+        // ReserveStrategy as fallback (works on both networks)
         ReserveStrategy reserveStrategy = new ReserveStrategy(asset, deployed.vault, deployer);
         deployed.reserveStrategy = address(reserveStrategy);
         console2.log("7. ReserveStrategy:", deployed.reserveStrategy);
 
         // ============ 6. Deploy Controller ============
 
-        // On mainnet, replace with real Chainlink Functions forwarder
-        address forwarder = deployer; // TODO: set real Chainlink forwarder before mainnet
+        // Forwarder: deployer acts as forwarder (manual onReport via x402 server).
+        // Replace with real Chainlink Automation forwarder for production.
+        address forwarder = deployer;
         SavannaController controller =
             new SavannaController(deployed.vault, forwarder, deployer);
         deployed.controller = address(controller);
@@ -182,18 +180,20 @@ contract Deploy is Script {
         vault.setController(deployed.controller);
         console2.log("=> Vault controller set");
 
-        // Register strategies on controller (AaveV3 + MentoSavings + Reserve on Celo)
-        controller.setStrategy(DataTypes.Protocol.AaveV3, deployed.aaveStrategy);
-        if (deployed.mentoSavingsStrategy != address(0)) {
-            controller.setStrategy(DataTypes.Protocol.MentoSavings, deployed.mentoSavingsStrategy);
+        // Register strategies on controller
+        if (isMainnet) {
+            controller.setStrategy(DataTypes.Protocol.Moola, deployed.moolaStrategy);
+        } else {
+            controller.setStrategy(DataTypes.Protocol.AaveV3, deployed.aaveStrategy);
         }
         controller.setStrategy(DataTypes.Protocol.Reserve, deployed.reserveStrategy);
-        console2.log("=> Strategies registered (AaveV3, MentoSavings, Reserve)");
+        console2.log("=> Strategies registered (Moola/AaveV3 + Reserve)");
 
         // Set controller on strategies
-        aaveStrategy.setController(deployed.controller);
-        if (deployed.mentoSavingsStrategy != address(0)) {
-            mentoSavingsStrategy.setController(deployed.controller);
+        if (isMainnet) {
+            MoolaStrategy(deployed.moolaStrategy).setController(deployed.controller);
+        } else {
+            AaveV3Strategy(deployed.aaveStrategy).setController(deployed.controller);
         }
         reserveStrategy.setController(deployed.controller);
         console2.log("=> Controller set on strategies");
@@ -206,7 +206,7 @@ contract Deploy is Script {
 
         // ============ 8. Deploy Cross-Chain Receiver ============
 
-        address swapRouter = isMainnet ? MAINNET_UBESWAP_ROUTER : address(0);
+        address swapRouter = address(0); // TODO: set Ubeswap or Mento Router before use
         address wrappedCelo = isMainnet ? MAINNET_WRAPPED_CELO : address(0);
 
         SavannaCrossChainReceiver crossChainReceiver =
@@ -221,7 +221,7 @@ contract Deploy is Script {
         console2.log("=> Cross-chain receiver set on vault");
 
         // Allow major chains as source for cross-chain deposits
-        uint256[] memory allowedChains = new uint256[](8);
+        uint256[] memory allowedChains = new uint256[](isMainnet ? 7 : 8);
         allowedChains[0] = 1; // Ethereum Mainnet
         allowedChains[1] = 42161; // Arbitrum One
         allowedChains[2] = 10; // Optimism
@@ -229,9 +229,11 @@ contract Deploy is Script {
         allowedChains[4] = 8453; // Base
         allowedChains[5] = 56; // BSC
         allowedChains[6] = 43114; // Avalanche
-        allowedChains[7] = 11142220; // Celo Sepolia
+        if (!isMainnet) {
+            allowedChains[7] = 11142220; // Celo Sepolia (only on testnet)
+        }
         crossChainReceiver.setSourceChains(allowedChains, true);
-        console2.log("=> Source chains allowed (ETH, ARB, OP, MATIC, BASE, BSC, AVAX, CELO_SEPOLIA)");
+        console2.log("=> Source chains allowed (ETH, ARB, OP, MATIC, BASE, BSC, AVAX", isMainnet ? "" : ", CELO_SEPOLIA", ")");
 
         // ============ 10. Deploy ERC-8004 Agent Identity ============
 

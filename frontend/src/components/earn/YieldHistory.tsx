@@ -13,7 +13,7 @@ type Filter = "7D" | "30D" | "ALL";
 
 export function YieldHistory() {
   const { chainId: activeChainId } = useAccount();
-  const chainId = activeChainId ?? 11142220;
+  const chainId = activeChainId ?? 42220;
   const contracts = getContracts(chainId);
   const { totalYieldEarned, totalDeployed, tokenDecimals, isLoading } = useVaultData();
 

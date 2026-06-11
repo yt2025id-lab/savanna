@@ -8,7 +8,7 @@ import { useState, useEffect } from "react";
 
 export function useVaultData() {
   const { address, chainId } = useAccount();
-  const activeChainId = chainId ?? 11142220;
+  const activeChainId = chainId ?? 42220;
   const contracts = getContracts(activeChainId);
   const publicClient = usePublicClient({ chainId: activeChainId });
   const [tokenBalance, setTokenBalance] = useState<bigint | undefined>(undefined);
@@ -17,8 +17,11 @@ export function useVaultData() {
   const [allowance, setAllowance] = useState<bigint | undefined>(undefined);
 
   useEffect(() => {
-    if (!address || !contracts.usdc || !publicClient) return;
-    const usdcAddr = contracts.usdc as `0x${string}`;
+    if (!address || !publicClient) return;
+    const isMainnet = activeChainId === 42220;
+    const vaultAsset = isMainnet ? contracts.cusd : contracts.usdc;
+    if (!vaultAsset) return;
+    const usdcAddr = vaultAsset as `0x${string}`;
     publicClient.readContract({
       address: usdcAddr,
       abi: [{ name: "balanceOf", type: "function", stateMutability: "view", inputs: [{ name: "account", type: "address" }], outputs: [{ name: "", type: "uint256" }] }],
@@ -156,12 +159,13 @@ export function useVaultData() {
   });
 
   // Read oracle asset price (for StatsBar APY calculation)
+  const oracleAddr = contracts.oracle as `0x${string}`;
   const { data: oracleAssetPrice } = useReadContract({
-    address: contracts.oracle as `0x${string}`,
+    address: oracleAddr,
     abi: SAVANNA_ORACLE_ABI,
     functionName: "getAssetPrice",
     args: [contracts.usdc],
-    query: { enabled: !!contracts.oracle },
+    query: { enabled: !!contracts.oracle && contracts.oracle !== "0x0000000000000000000000000000000000000000" },
   });
 
   const dec = tokenDecimals;
