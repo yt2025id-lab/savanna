@@ -134,16 +134,22 @@ contract Deploy is Script {
         // ============ 5. Deploy Strategies ============
 
         if (isMainnet) {
-            // Mainnet: deploy Moola (USDm) + Reserve
-            // Skip AaveV3 (uses USDC, not USDm) and MentoSavings (deprecated)
+            // Mainnet: deploy all 4 strategies (Moola, AaveV3, MentoSavings, Reserve)
+
+            AaveV3Strategy aaveStrategy = new AaveV3Strategy(
+                asset, deployed.vault, deployer, MAINNET_AAVE_POOL, MAINNET_AAVE_AUSDC
+            );
+            deployed.aaveStrategy = address(aaveStrategy);
+            console2.log("5a. AaveV3Strategy:", deployed.aaveStrategy);
 
             MoolaStrategy moolaStrategy = new MoolaStrategy(
                 asset, deployed.vault, deployer, MAINNET_MOOLA_POOL, MAINNET_MOOLA_MCUSD
             );
-            deployed.aaveStrategy = address(0); // not used
-            deployed.mentoSavingsStrategy = address(0); // not used
             deployed.moolaStrategy = address(moolaStrategy);
-            console2.log("5. MoolaStrategy:", deployed.moolaStrategy);
+            console2.log("5b. MoolaStrategy:", deployed.moolaStrategy);
+
+            deployed.mentoSavingsStrategy = address(0); // deployed separately
+            console2.log("5c. MentoSavings: deployed separately");
         } else {
             // Testnet: deploy AaveV3 (mock) + MentoSavings (placeholder) + Reserve
             address aavePool = SEPOLIA_AAVE_POOL;
@@ -162,7 +168,7 @@ contract Deploy is Script {
         // ReserveStrategy as fallback (works on both networks)
         ReserveStrategy reserveStrategy = new ReserveStrategy(asset, deployed.vault, deployer);
         deployed.reserveStrategy = address(reserveStrategy);
-        console2.log("7. ReserveStrategy:", deployed.reserveStrategy);
+        console2.log("5d. ReserveStrategy:", deployed.reserveStrategy);
 
         // ============ 6. Deploy Controller ============
 
@@ -182,15 +188,17 @@ contract Deploy is Script {
 
         // Register strategies on controller
         if (isMainnet) {
+            controller.setStrategy(DataTypes.Protocol.AaveV3, deployed.aaveStrategy);
             controller.setStrategy(DataTypes.Protocol.Moola, deployed.moolaStrategy);
         } else {
             controller.setStrategy(DataTypes.Protocol.AaveV3, deployed.aaveStrategy);
         }
         controller.setStrategy(DataTypes.Protocol.Reserve, deployed.reserveStrategy);
-        console2.log("=> Strategies registered (Moola/AaveV3 + Reserve)");
+        console2.log("=> Strategies registered (AaveV3 + Moola + Reserve)");
 
         // Set controller on strategies
         if (isMainnet) {
+            AaveV3Strategy(deployed.aaveStrategy).setController(deployed.controller);
             MoolaStrategy(deployed.moolaStrategy).setController(deployed.controller);
         } else {
             AaveV3Strategy(deployed.aaveStrategy).setController(deployed.controller);
@@ -277,6 +285,7 @@ contract Deploy is Script {
         console2.log("CrossChainReceiver:", deployed.crossChainReceiver);
         console2.log("AaveV3:", deployed.aaveStrategy);
         console2.log("MentoSavings:", deployed.mentoSavingsStrategy);
+        console2.log("Moola:", deployed.moolaStrategy);
         console2.log("Reserve:", deployed.reserveStrategy);
         console2.log("AgentIdentity:", deployed.agentIdentity);
 
