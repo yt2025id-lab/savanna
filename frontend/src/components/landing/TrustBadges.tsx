@@ -2,7 +2,7 @@
 
 import { useRef } from "react";
 import { useGSAP } from "@gsap/react";
-import { gsap } from "@/lib/gsap";
+import { gsap, ScrollTrigger } from "@/lib/gsap";
 import { Shield, FileCheck, Code2, Globe, Key, Lock } from "lucide-react";
 
 const badges = [
@@ -16,12 +16,19 @@ const badges = [
 
 export function TrustBadges() {
   const containerRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
 
   useGSAP(() => {
-    if (!containerRef.current) return;
-    gsap.from(containerRef.current.querySelectorAll(".badge-item"), {
-      scrollTrigger: { trigger: containerRef.current, start: "top 85%", toggleActions: "play none none none" },
-      opacity: 0, scale: 0.85, duration: 0.5, stagger: 0.06, ease: "back.out(1.5)",
+    if (!gridRef.current) return;
+    const items = gridRef.current.querySelectorAll(".badge-item");
+    gsap.set(items, { opacity: 0, scale: 0.85 });
+    ScrollTrigger.batch(items, {
+      onEnter: (batch) => {
+        gsap.to(batch, {
+          opacity: 1, scale: 1, duration: 0.5, stagger: 0.06, ease: "back.out(1.5)",
+        });
+      },
+      start: "top 90%",
     });
   }, { scope: containerRef });
 
@@ -46,7 +53,7 @@ export function TrustBadges() {
           Every contract verified on Celoscan. Dual security audits. OpenZeppelin battle-tested libraries.
         </p>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+        <div ref={gridRef} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
           {badges.map((badge) => (
             <div
               key={badge.label}
