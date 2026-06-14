@@ -74,16 +74,16 @@ contract MoolaStrategy is BaseStrategy {
     }
 
     /// @notice Get the current APY from Moola liquidity rate
-    /// @dev currentLiquidityRate is annual rate in RAY (1e27), convert to basis points
+    /// @dev currentLiquidityRate is per-second rate in RAY (1e27); convert to annual basis points
     function getApy() external view override returns (uint256) {
         (, , , uint128 currentLiquidityRate, , , , , , , , ) =
             IMoolaLendingPool(MOOLA_POOL).getReserveData(ASSET);
 
         if (currentLiquidityRate == 0) return 0;
 
-        // currentLiquidityRate is annual rate in RAY (1e27)
-        // APY = currentLiquidityRate / RAY * BPS_DIVISOR
-        uint256 apyBps = (uint256(currentLiquidityRate) * BPS_DIVISOR) / RAY;
+        // currentLiquidityRate is per-second rate in RAY (1e27)
+        // APY = rate * seconds_per_year / RAY * BPS_DIVISOR
+        uint256 apyBps = (uint256(currentLiquidityRate) * 365 days * BPS_DIVISOR) / RAY;
         return apyBps;
     }
 

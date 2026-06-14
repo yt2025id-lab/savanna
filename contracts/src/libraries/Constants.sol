@@ -52,7 +52,8 @@ library Constants {
 
     // ============ Cross-Chain ============
 
-    /// @notice Minimum cross-chain deposit amount (in vault asset units)
+    /// @notice Minimum cross-chain deposit amount (in vault asset units, 6-decimal USDC default)
+    /// @dev For 18-decimal assets (cUSD/USDm), the effective minimum is ~5e18 wei
     uint256 public constant MIN_CROSS_CHAIN_DEPOSIT = 5e6; // 5 USDC
     /// @notice Maximum number of allowed source chains
     uint256 public constant MAX_SOURCE_CHAINS = 30;

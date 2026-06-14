@@ -88,6 +88,9 @@ export function YieldHistory() {
         <div className="flex items-center gap-2">
           <BarChart3 className="h-5 w-5 text-accent" />
           <h2 className="text-base font-semibold text-foreground">Yield History</h2>
+          <span className="rounded-full bg-warning-dim/50 border border-warning/20 px-1.5 py-0.5 text-[9px] font-medium text-warning/80">
+            Estimated
+          </span>
         </div>
         {/* Filter buttons */}
         <div className="flex gap-1 rounded-lg bg-background p-0.5">

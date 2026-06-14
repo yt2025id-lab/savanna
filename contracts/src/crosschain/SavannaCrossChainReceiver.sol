@@ -10,7 +10,6 @@ import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {DataTypes} from "../libraries/DataTypes.sol";
 import {Errors} from "../libraries/Errors.sol";
-import {Constants} from "../libraries/Constants.sol";
 
 interface IUniswapV2Router02 {
     function swapExactTokensForTokens(
@@ -49,6 +48,10 @@ contract SavannaCrossChainReceiver is Ownable, ReentrancyGuard, Pausable {
     address public immutable VAULT;
     /// @notice The vault's underlying asset (e.g., USDC on Celo)
     address public immutable VAULT_ASSET;
+    /// @notice Decimals of the vault's underlying asset
+    uint8 public immutable VAULT_ASSET_DECIMALS;
+    /// @notice Minimum cross-chain deposit amount in vault asset units
+    uint256 public minCrossChainDeposit;
     /// @notice Uniswap V2 compatible DEX router (Ubeswap/Aerodrome on Celo)
     address public swapRouter;
     /// @notice Wrapped native token (for CELO -> stable swaps)
@@ -61,6 +64,8 @@ contract SavannaCrossChainReceiver is Ownable, ReentrancyGuard, Pausable {
     mapping(address => address[]) public swapPaths;
     /// @notice Bridge token => swap amount out minimum (slippage protection)
     mapping(address => uint256) public minSwapAmountOut;
+    /// @notice Default max slippage in basis points (1% = 100) when minSwapAmountOut is 0
+    uint256 public defaultMaxSlippageBps = 100;
     /// @notice Default swap deadline offset from block.timestamp (in seconds)
     uint256 public swapDeadlineOffset = 300;
     /// @notice Total cross-chain deposits received
@@ -108,9 +113,10 @@ contract SavannaCrossChainReceiver is Ownable, ReentrancyGuard, Pausable {
     constructor(address vault_, address owner_, address swapRouter_, address wrappedNative_) Ownable(owner_) {
         if (vault_ == address(0)) revert Errors.Savanna__ZeroAddress();
         VAULT = vault_;
-        VAULT_ASSET = _getVaultAsset(vault_);
+        (VAULT_ASSET, VAULT_ASSET_DECIMALS) = _getVaultAssetInfo(vault_);
         swapRouter = swapRouter_;
         wrappedNative = wrappedNative_;
+        minCrossChainDeposit = 5 * (10 ** VAULT_ASSET_DECIMALS); // 5 units of vault asset
     }
 
     // ============ Receive Functions ============
@@ -138,8 +144,8 @@ contract SavannaCrossChainReceiver is Ownable, ReentrancyGuard, Pausable {
         if (!allowedSourceChains[sourceChainId]) {
             revert Errors.Savanna__SourceChainNotAllowed(sourceChainId);
         }
-        if (amount < Constants.MIN_CROSS_CHAIN_DEPOSIT) {
-            revert Errors.Savanna__CrossChainDepositBelowMin(amount, Constants.MIN_CROSS_CHAIN_DEPOSIT);
+        if (amount < minCrossChainDeposit) {
+            revert Errors.Savanna__CrossChainDepositBelowMin(amount, minCrossChainDeposit);
         }
 
         uint256 depositAmount;
@@ -210,6 +216,16 @@ contract SavannaCrossChainReceiver is Ownable, ReentrancyGuard, Pausable {
         minSwapAmountOut[bridgeToken] = minAmount;
     }
 
+    /// @notice Set default max slippage in basis points (used when minSwapAmountOut(token) is 0)
+    function setDefaultMaxSlippageBps(uint256 bps) external onlyOwner {
+        defaultMaxSlippageBps = bps;
+    }
+
+    /// @notice Set minimum cross-chain deposit amount
+    function setMinCrossChainDeposit(uint256 minimum) external onlyOwner {
+        minCrossChainDeposit = minimum;
+    }
+
     /// @notice Update the DEX swap router address
     function setSwapRouter(address swapRouter_) external onlyOwner {
         if (swapRouter_ == address(0)) revert Errors.Savanna__ZeroAddress();
@@ -270,7 +286,7 @@ contract SavannaCrossChainReceiver is Ownable, ReentrancyGuard, Pausable {
         if (!allowedSourceChains[sourceChainId]) {
             revert Errors.Savanna__SourceChainNotAllowed(sourceChainId);
         }
-        uint256 minipayMinCrossChain = Constants.MIN_CROSS_CHAIN_DEPOSIT / 5;
+        uint256 minipayMinCrossChain = minCrossChainDeposit / 5;
         if (amount < minipayMinCrossChain) {
             revert Errors.Savanna__CrossChainDepositBelowMin(amount, minipayMinCrossChain);
         }
@@ -365,6 +381,10 @@ contract SavannaCrossChainReceiver is Ownable, ReentrancyGuard, Pausable {
         IERC20(tokenIn).forceApprove(swapRouter, amountIn);
 
         uint256 minOut = minSwapAmountOut[tokenIn];
+        if (minOut == 0) {
+            uint256 expectedOut = IUniswapV2Router02(swapRouter).getAmountsOut(amountIn, path)[path.length - 1];
+            minOut = (expectedOut * (10000 - defaultMaxSlippageBps)) / 10000;
+        }
         uint256 deadline = block.timestamp + swapDeadlineOffset;
 
         uint256[] memory amounts = IUniswapV2Router02(swapRouter).swapExactTokensForTokens(
@@ -378,12 +398,17 @@ contract SavannaCrossChainReceiver is Ownable, ReentrancyGuard, Pausable {
         amountOut = amounts[amounts.length - 1];
     }
 
-    /// @dev Helper to get vault asset address from ERC-4626 vault contract
-    function _getVaultAsset(address vault) internal view returns (address) {
+    /// @dev Helper to get vault asset address and decimals from ERC-4626 vault contract
+    function _getVaultAssetInfo(address vault) internal view returns (address asset, uint8 decimals_) {
         (bool success, bytes memory data) = vault.staticcall(
             abi.encodeWithSelector(IERC4626(address(0)).asset.selector)
         );
         if (!success || data.length < 32) revert Errors.Savanna__ZeroAddress();
-        return abi.decode(data, (address));
+        asset = abi.decode(data, (address));
+
+        (success, data) = asset.staticcall(
+            abi.encodeWithSignature("decimals()")
+        );
+        decimals_ = (success && data.length >= 32) ? abi.decode(data, (uint8)) : 18;
     }
 }

@@ -184,13 +184,22 @@ export function ProtocolYieldCards() {
   const contracts = getContracts(activeChainId);
   const isMainnet = activeChainId === 42220;
 
+  const aaveAddr = contracts.aaveStrategy as `0x${string}` | undefined;
   const moolaAddr = contracts.moolaStrategy as `0x${string}` | undefined;
+  const mentoAddr = contracts.mentoSavingsStrategy as `0x${string}` | undefined;
   const reserveAddr = contracts.reserveStrategy as `0x${string}` | undefined;
 
+  const isAaveZero = !aaveAddr || aaveAddr === "0x0000000000000000000000000000000000000000";
   const isMoolaZero = !moolaAddr || moolaAddr === "0x0000000000000000000000000000000000000000";
+  const isMentoZero = !mentoAddr || mentoAddr === "0x0000000000000000000000000000000000000000";
   const isReserveZero = !reserveAddr || reserveAddr === "0x0000000000000000000000000000000000000000";
-  const isAaveZero = contracts.aaveStrategy === "0x0000000000000000000000000000000000000000";
-  const isMentoZero = contracts.mentoSavingsStrategy === "0x0000000000000000000000000000000000000000";
+
+  const { data: aaveApy } = useReadContract({
+    address: aaveAddr,
+    abi: STRATEGY_ABI,
+    functionName: "getApy",
+    query: { enabled: !isAaveZero && !!aaveAddr },
+  });
 
   const { data: moolaApy } = useReadContract({
     address: moolaAddr,
@@ -199,18 +208,18 @@ export function ProtocolYieldCards() {
     query: { enabled: !isMoolaZero && !!moolaAddr },
   });
 
+  const { data: mentoApy } = useReadContract({
+    address: mentoAddr,
+    abi: STRATEGY_ABI,
+    functionName: "getApy",
+    query: { enabled: !isMentoZero && !!mentoAddr },
+  });
+
   const { data: reserveApy } = useReadContract({
     address: reserveAddr,
     abi: STRATEGY_ABI,
     functionName: "getApy",
     query: { enabled: !isReserveZero && !!reserveAddr },
-  });
-
-  const { data: moolaName } = useReadContract({
-    address: moolaAddr,
-    abi: STRATEGY_ABI,
-    functionName: "protocolName",
-    query: { enabled: !isMoolaZero && !!moolaAddr },
   });
 
   const { data: vaultTotalDeployed } = useReadContract({
@@ -242,14 +251,19 @@ export function ProtocolYieldCards() {
   };
 
   const moolaApyVal = moolaApy as bigint | undefined;
+  const aaveApyVal = aaveApy as bigint | undefined;
+  const mentoApyVal = mentoApy as bigint | undefined;
+
+  const aaveLabel = fmtApy(isAaveZero ? undefined : aaveApyVal, "—");
   const moolaLabel = fmtApy(isMoolaZero ? undefined : (moolaApyVal && moolaApyVal > BigInt(0) ? moolaApyVal : undefined), "—");
+  const mentoLabel = fmtApy(isMentoZero ? undefined : mentoApyVal, "—");
   const reserveLabel = fmtApy(isReserveZero ? undefined : (reserveApy as bigint | undefined), "0%");
   const tvlLabel = fmtTvl(vaultTotalDeployed as bigint | undefined);
 
   const cards = [
     {
       def: PROTOCOL_DEFS[0],
-      apy: isAaveZero ? "—" : "3.2—8.5%",
+      apy: aaveLabel,
       tvl: isAaveZero ? "—" : "$42.8M",
       deployed: !isAaveZero,
       isZero: isAaveZero,
@@ -263,7 +277,7 @@ export function ProtocolYieldCards() {
     },
     {
       def: PROTOCOL_DEFS[2],
-      apy: isMentoZero ? "—" : "4.0—9.5%",
+      apy: mentoLabel,
       tvl: isMentoZero ? "—" : "$8.6M",
       deployed: !isMentoZero,
       isZero: isMentoZero,

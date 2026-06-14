@@ -29,7 +29,22 @@ interface FulfillResponse {
   error?: string;
 }
 
+// Simple API key auth for fulfill (costs deployer gas)
+function checkFulfillAuth(req: Request, res: Response): boolean {
+  const apiKey = process.env.FULFILL_API_KEY;
+  if (!apiKey) {
+    console.warn("⚠️  FULFILL_API_KEY not set — fulfillment endpoint secured by CORS only. Set FULFILL_API_KEY in production.");
+    return true;
+  }
+  const auth = req.headers["authorization"];
+  if (auth === `Bearer ${apiKey}`) return true;
+  res.status(401).json({ error: "Unauthorized — valid FULFILL_API_KEY required" });
+  return false;
+}
+
 router.post("/fulfill", async (req: Request, res: Response) => {
+  if (!checkFulfillAuth(req, res)) return;
+
   try {
     const { userAddress, timeHorizon, depositAmount } = req.body as FulfillRequest;
 
@@ -121,6 +136,7 @@ router.post("/fulfill", async (req: Request, res: Response) => {
     // Wait for receipt with longer timeout
     const receipt = await provider.waitForTransaction(sentTx.hash, 1, 120_000);
     if (!receipt) throw new Error("Transaction not confirmed after 120s");
+    if (receipt.status === 0) throw new Error("Transaction reverted — onReport execution failed");
 
     const response: FulfillResponse = {
       success: true,

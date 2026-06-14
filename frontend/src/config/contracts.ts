@@ -80,6 +80,21 @@ export function getAddressUrl(address: string, chainId?: number): string {
   return `${getExplorerUrl(chainId)}/address/${address}`;
 }
 
+// Strategy protocol names mapped to addresses
+export const PROTOCOL_NAME_MAP: Record<string, string> = {
+  "0x98da524b50676650b357d0806f72dd4976268dad": "Aave V3",
+  "0xcbcec5a5c17797c601b1f747a3977423397c904e": "Moola",
+  "0x8d3599610165bbb66c6b6cc4a311f8e82abb0fd6": "Mento Savings",
+  "0xff8433711abd603b3c9a07cfa51a4b157ec300e9": "Reserve",
+  "0x69820126fb60b60597447f5405647f2e2dc76103": "Aave V3",
+  "0x1022bcbf6bfdc8cb9e491cd09eb39d858cb717db": "Reserve",
+};
+
+export function getProtocolName(strategyAddress: string): string {
+  const key = strategyAddress.toLowerCase();
+  return PROTOCOL_NAME_MAP[key] ?? `${key.slice(0, 6)}...${key.slice(-4)}`;
+}
+
 // LI.FI Configuration
 export const LIFI_CONFIG = {
   integrator: "savanna-finance",

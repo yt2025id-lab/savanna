@@ -1,52 +1,78 @@
 "use client";
 
-import { useAccount, useReadContract, usePublicClient } from "wagmi";
+import { useAccount, useReadContract, usePublicClient, useWatchContractEvent } from "wagmi";
 import { formatUnits } from "viem";
 import { SAVANNA_VAULT_ABI, SAVANNA_CONTROLLER_ABI, SAVANNA_ORACLE_ABI } from "@/config/abis";
 import { getContracts } from "@/config/contracts";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+
+const ERC20_ABI_META = [
+  { name: "balanceOf", type: "function", stateMutability: "view", inputs: [{ name: "account", type: "address" }], outputs: [{ name: "", type: "uint256" }] },
+  { name: "decimals", type: "function", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "uint8" }] },
+  { name: "symbol", type: "function", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "string" }] },
+  { name: "allowance", type: "function", stateMutability: "view", inputs: [{ name: "owner", type: "address" }, { name: "spender", type: "address" }], outputs: [{ name: "", type: "uint256" }] },
+];
 
 export function useVaultData() {
   const { address, chainId } = useAccount();
   const activeChainId = chainId ?? 42220;
   const contracts = getContracts(activeChainId);
   const publicClient = usePublicClient({ chainId: activeChainId });
-  const [tokenBalance, setTokenBalance] = useState<bigint | undefined>(undefined);
-  const [tokenDecimals, setTokenDecimals] = useState<number>(6);
-  const [tokenSymbol, setTokenSymbol] = useState<string>("USDC");
-  const [allowance, setAllowance] = useState<bigint | undefined>(undefined);
+  const [assetAddress, setAssetAddress] = useState<`0x${string}` | undefined>(undefined);
+
+  // Read vault asset address dynamically
+  const { data: vaultAsset } = useReadContract({
+    address: contracts.vault as `0x${string}`,
+    abi: [{ name: "asset", type: "function", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "address" }] }],
+    functionName: "asset",
+  });
 
   useEffect(() => {
-    if (!address || !publicClient) return;
-    const isMainnet = activeChainId === 42220;
-    const vaultAsset = isMainnet ? contracts.cusd : contracts.usdc;
-    if (!vaultAsset) return;
-    const usdcAddr = vaultAsset as `0x${string}`;
-    publicClient.readContract({
-      address: usdcAddr,
-      abi: [{ name: "balanceOf", type: "function", stateMutability: "view", inputs: [{ name: "account", type: "address" }], outputs: [{ name: "", type: "uint256" }] }],
-      functionName: "balanceOf",
-      args: [address],
-    }).then((bal) => setTokenBalance(bal as bigint));
-    publicClient.readContract({
-      address: usdcAddr,
-      abi: [{ name: "decimals", type: "function", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "uint8" }] }],
-      functionName: "decimals",
-      args: [],
-    }).then((dec) => setTokenDecimals(Number(dec)));
-    publicClient.readContract({
-      address: usdcAddr,
-      abi: [{ name: "symbol", type: "function", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "string" }] }],
-      functionName: "symbol",
-      args: [],
-    }).then((sym) => setTokenSymbol(sym as string));
-    publicClient.readContract({
-      address: usdcAddr,
-      abi: [{ name: "allowance", type: "function", stateMutability: "view", inputs: [{ name: "owner", type: "address" }, { name: "spender", type: "address" }], outputs: [{ name: "", type: "uint256" }] }],
-      functionName: "allowance",
-      args: [address, contracts.vault],
-    }).then((all) => setAllowance(all as bigint));
-  }, [address, contracts.usdc, contracts.vault, publicClient]);
+    if (vaultAsset) setAssetAddress(vaultAsset as `0x${string}`);
+  }, [vaultAsset]);
+
+  // Read token balance, decimals, symbol, allowance via wagmi hooks (auto-refresh)
+  const { data: tokenBalance, refetch: refetchBalance } = useReadContract({
+    address: assetAddress,
+    abi: ERC20_ABI_META,
+    functionName: "balanceOf",
+    args: address ? [address] : undefined,
+    query: { enabled: !!assetAddress && !!address },
+  });
+
+  const { data: tokenDecimalsRaw } = useReadContract({
+    address: assetAddress,
+    abi: ERC20_ABI_META,
+    functionName: "decimals",
+    query: { enabled: !!assetAddress },
+  });
+
+  const { data: tokenSymbolRaw } = useReadContract({
+    address: assetAddress,
+    abi: ERC20_ABI_META,
+    functionName: "symbol",
+    query: { enabled: !!assetAddress },
+  });
+
+  const { data: allowance } = useReadContract({
+    address: assetAddress,
+    abi: ERC20_ABI_META,
+    functionName: "allowance",
+    args: address ? [address, contracts.vault as `0x${string}`] : undefined,
+    query: { enabled: !!assetAddress && !!address },
+  });
+
+  const tokenDecimals = typeof tokenDecimalsRaw === "number" ? tokenDecimalsRaw : 18;
+  const tokenSymbol = typeof tokenSymbolRaw === "string" ? tokenSymbolRaw : "cUSD";
+
+  // Auto-refresh balance when user sends/receives tokens
+  useWatchContractEvent({
+    address: assetAddress,
+    abi: ERC20_ABI_META,
+    eventName: "Transfer",
+    onLogs: () => { refetchBalance(); },
+    enabled: !!assetAddress,
+  });
 
   // Read total assets (TVL)
   const { data: totalAssets, isLoading: loadingTotalAssets } = useReadContract({

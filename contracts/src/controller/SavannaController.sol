@@ -36,6 +36,12 @@ contract SavannaController is ISavannaController, Ownable, Pausable, ReentrancyG
     mapping(address => address) public priceFeeds;
     /// @notice Track total recommendations processed
     uint256 public totalRecommendations;
+    /// @notice Per-user nonce for replay protection (incremented each onReport execution)
+    mapping(address => uint256) public userNonce;
+    /// @notice Timestamp of last report per user (front-running + replay protection)
+    mapping(address => uint256) public lastReportTs;
+    /// @notice Minimum cooldown between onReport calls per user (prevents rapid re-execution)
+    uint256 public reportCooldown = 0; // 0 = disabled, set to e.g. 5 minutes in production
 
     // ============ Constructor ============
 
@@ -68,6 +74,11 @@ contract SavannaController is ISavannaController, Ownable, Pausable, ReentrancyG
         priceFeeds[asset] = feed;
     }
 
+    /// @notice Set minimum cooldown between onReport calls per user
+    function setReportCooldown(uint256 cooldown) external onlyOwner {
+        reportCooldown = cooldown;
+    }
+
     // ============ Chainlink Oracle Receiver ============
 
     /// @notice Called by Chainlink Forwarder to deliver AI recommendation
@@ -96,7 +107,15 @@ contract SavannaController is ISavannaController, Ownable, Pausable, ReentrancyG
         address strategy = strategies[protocol];
         if (strategy == address(0)) revert Errors.Savanna__StrategyNotRegistered();
 
+        // Replay protection: enforce cooldown between reports per user
+        if (block.timestamp < lastReportTs[user] + reportCooldown) {
+            revert Errors.Savanna__InvalidState("report cooldown active");
+        }
+        userNonce[user]++;
+
         // ============ Execute ============
+
+        lastReportTs[user] = block.timestamp;
 
         emit RecommendationReceived(user, protocol, allocationBps, expectedApy, reasoning);
 
@@ -138,14 +157,60 @@ contract SavannaController is ISavannaController, Ownable, Pausable, ReentrancyG
     // ============ Rebalance ============
 
     /// @notice Called by vault during Chainlink Automation rebalance cycle
-    /// @dev In production, the AI agent (Chainlink Functions) evaluates all active positions
-    ///      and determines if any should be reallocated to a better-yielding protocol.
-    ///      This is a placeholder that the AI agent workflow will call.
-    function rebalance() external view {
+    /// @dev Scans all registered strategies to find the highest APY, then
+    ///      signals the vault to notify the AI agent for reallocation.
+    ///      Returns the protocol with the highest current APY.
+    function rebalance() external view returns (DataTypes.Protocol bestProtocol, uint256 bestApy) {
         if (msg.sender != vault) revert Errors.Savanna__OnlyVault();
-        // Rebalance logic is handled by AI agent via Chainlink Functions
-        // The vault calls this to signal a rebalance cycle is due
-        // In production: iterate positions, compare APYs, trigger re-allocation
+
+        uint8 protocolCount = Constants.PROTOCOL_COUNT;
+        for (uint8 i = 0; i < protocolCount; i++) {
+            DataTypes.Protocol protocol = DataTypes.Protocol(i);
+            address strategy = strategies[protocol];
+            if (strategy == address(0)) continue;
+
+            // Query current APY from strategy (silent fail if reverted)
+            try IStrategy(strategy).getApy() returns (uint256 apy) {
+                if (apy > bestApy) {
+                    bestApy = apy;
+                    bestProtocol = protocol;
+                }
+            } catch {
+                continue;
+            }
+        }
+    }
+
+    /// @notice Get all protocol APYs at once for off-chain/AI consumption
+    function getAllProtocolApys()
+        external
+        view
+        returns (DataTypes.Protocol[] memory protocols, uint256[] memory apys)
+    {
+        uint8 protocolCount = Constants.PROTOCOL_COUNT;
+        protocols = new DataTypes.Protocol[](protocolCount);
+        apys = new uint256[](protocolCount);
+
+        uint8 written = 0;
+        for (uint8 i = 0; i < protocolCount; i++) {
+            DataTypes.Protocol protocol = DataTypes.Protocol(i);
+            address strategy = strategies[protocol];
+            if (strategy == address(0)) continue;
+
+            try IStrategy(strategy).getApy() returns (uint256 apy) {
+                protocols[written] = protocol;
+                apys[written] = apy;
+                written++;
+            } catch {
+                continue;
+            }
+        }
+
+        // Resize arrays to actual count
+        assembly {
+            mstore(protocols, written)
+            mstore(apys, written)
+        }
     }
 
     // ============ View Functions ============

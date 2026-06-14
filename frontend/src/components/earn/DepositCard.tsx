@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from "wagmi";
 import { parseUnits, formatUnits } from "viem";
 import { SAVANNA_VAULT_ABI, ERC20_ABI } from "@/config/abis";
@@ -8,7 +8,7 @@ import { getContracts } from "@/config/contracts";
 import { useVaultData } from "@/hooks/useVaultData";
 import { LiFiSwapCard } from "@/components/lifi/LiFiSwapCard";
 import { CrossChainDeposit } from "@/components/CrossChainDeposit";
-import { ArrowDownToLine, AlertCircle, Loader2, CheckCircle2, Sparkles, Zap, RefreshCw } from "lucide-react";
+import { ArrowDownToLine, AlertCircle, AlertTriangle, Loader2, CheckCircle2, Sparkles, Zap, RefreshCw } from "lucide-react";
 import clsx from "clsx";
 
 const TESTNET_ASSETS = [
@@ -105,35 +105,46 @@ export function DepositCard() {
   }, [depositSuccess]);
 
   // Step 2: requestStrategy success → call x402 backend to fulfill on-chain
+  // Deposit already succeeded — x402 failure won't block the user
   useEffect(() => {
-    if (strategySuccess && step === "strategizing" && address) {
-      const x402Base = (process.env.NEXT_PUBLIC_X402_ENDPOINT || "http://localhost:3001/api/strategy/analyze").replace(/\/analyze$/, "");
+    if (!strategySuccess || step !== "strategizing" || !address) return;
 
-      fetch(`${x402Base}/fulfill`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userAddress: address,
-          timeHorizon: 30 * 24 * 60 * 60,
-        }),
+    const x402Base = (process.env.NEXT_PUBLIC_X402_ENDPOINT || "http://localhost:3001/api/strategy/analyze").replace(/\/analyze$/, "");
+
+    fetch(`${x402Base}/fulfill`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userAddress: address,
+        timeHorizon: 30 * 24 * 60 * 60,
+      }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          setStep("done");
+        } else {
+          setStep("done");
+        }
       })
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.success) {
-            setStep("done");
-            const timer = setTimeout(() => setStep("idle"), 6000);
-            return () => clearTimeout(timer);
-          } else {
-            setErrorMsg(data.error || "Strategy fulfillment failed");
-            setStep("error");
-          }
-        })
-        .catch((err) => {
-          setErrorMsg(err.message || "Failed to call AI strategy");
-          setStep("error");
-        });
+      .catch(() => {
+        setStep("done");
+      });
+  }, [strategySuccess, address, step]);
+
+  // Auto-return to idle after done state
+  const doneTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (step === "done") {
+      doneTimerRef.current = setTimeout(() => {
+        setStep("idle");
+        setErrorMsg("");
+      }, 6000);
+      return () => {
+        if (doneTimerRef.current) clearTimeout(doneTimerRef.current);
+      };
     }
-  }, [strategySuccess, address]);
+  }, [step]);
 
   const parsedAmount = amount && !isNaN(Number(amount))
     ? parseUnits(amount, asset.decimals)
@@ -190,7 +201,13 @@ export function DepositCard() {
   const handleSetMax = () => {
     if (tokenBalance) {
       const formatted = formatUnits(tokenBalance, asset.decimals);
-      setAmount(parseFloat(formatted).toFixed(asset.decimals === 6 ? 2 : 4));
+      const dot = formatted.indexOf(".");
+      const maxDecimals = asset.decimals === 6 ? 2 : 4;
+      if (dot === -1) {
+        setAmount(formatted);
+      } else {
+        setAmount(formatted.slice(0, dot + 1 + maxDecimals));
+      }
     }
   };
 
@@ -258,6 +275,16 @@ export function DepositCard() {
           <span className="text-xs text-muted-light flex-1">AI-optimized yield</span>
           <span className="text-xs font-semibold text-accent">Auto-selected best protocol</span>
         </div>
+
+        {/* Insufficient balance warning */}
+        {parsedAmount > BigInt(0) && tokenBalance !== undefined && parsedAmount > tokenBalance && (
+          <div className="flex items-center gap-2 rounded-lg bg-danger-dim/30 border border-danger/20 px-3 py-2">
+            <AlertTriangle className="h-3.5 w-3.5 text-danger shrink-0" />
+            <p className="text-xs text-danger">
+              Insufficient balance: you have {userTokenBalanceFormatted} {selectedAsset}, trying to deposit {amount}
+            </p>
+          </div>
+        )}
 
         {/* Action buttons */}
         <div className="space-y-2">

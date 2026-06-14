@@ -58,5 +58,7 @@ interface ISavannaController {
     // ============ Rebalance ============
 
     /// @notice Called by vault during Chainlink Automation rebalance cycle
-    function rebalance() external view;
+    /// @return bestProtocol The protocol with the highest current APY
+    /// @return bestApy The highest APY in basis points
+    function rebalance() external view returns (DataTypes.Protocol bestProtocol, uint256 bestApy);
 }

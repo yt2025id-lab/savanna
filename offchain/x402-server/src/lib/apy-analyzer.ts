@@ -166,7 +166,34 @@ export async function analyzeAPY(params: {
   const horizon = Number(params.timeHorizon);
   const riskPref = params.riskPreference || "Any";
 
-  const protocols: ProtocolAPY[] = FALLBACK_PROTOCOLS.map(p => ({ ...p }));
+  // Fetch real on-chain APY from all configured protocols
+  const asset = params.usdcAddress || params.usdmAddress;
+  const [aaveData, mentoData, moolaData] = await Promise.all([
+    fetchAaveAPY(provider, asset, params.aavePool),
+    fetchMentoAPY(provider, params.mentoSavings),
+    fetchMoolaAPY(provider, asset, params.moolaPool),
+  ]);
+
+  const protocols: ProtocolAPY[] = [];
+
+  if (aaveData) protocols.push(aaveData);
+  if (mentoData) protocols.push(mentoData);
+  if (moolaData) protocols.push(moolaData);
+
+  // Reserve is always available as fallback with 0 APY
+  protocols.push({
+    protocol: "Reserve", protocolId: 3, apy: 0, tvl: 0,
+    safetyScore: 95, stabilityScore: 99,
+  });
+
+  // Fallback to hardcoded defaults only if all on-chain fetches failed
+  if (protocols.length <= 1) {
+    FALLBACK_PROTOCOLS.forEach((p) => {
+      if (!protocols.find((e) => e.protocolId === p.protocolId)) {
+        protocols.push({ ...p });
+      }
+    });
+  }
 
   // Apply risk preference: prefer safety for "Low", APY for "High"
   if (riskPref === "Low") {

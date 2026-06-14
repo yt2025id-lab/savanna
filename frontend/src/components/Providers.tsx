@@ -7,6 +7,8 @@ import { celoSepolia, celo } from "wagmi/chains";
 import { http } from "wagmi";
 import { detectMiniPay } from "@/lib/minipay";
 import { useEffect } from "react";
+import { ChainGuard } from "./ChainGuard";
+import { ErrorBanner } from "./ErrorBanner";
 
 const queryClient = new QueryClient();
 
@@ -49,7 +51,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <QueryClientProvider client={queryClient}>
         <WagmiProvider config={wagmiConfig}>
           <MiniPayAutoConnect>
-            {children}
+            <ChainGuard>
+              {children}
+            </ChainGuard>
+            <ErrorBanner />
           </MiniPayAutoConnect>
         </WagmiProvider>
       </QueryClientProvider>

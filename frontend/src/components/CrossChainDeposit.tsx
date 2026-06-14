@@ -2,15 +2,13 @@
 
 import { useState } from "react";
 import { useAccount } from "wagmi";
-import { Globe, ArrowDownRight, X, CheckCircle2, AlertCircle, ExternalLink } from "lucide-react";
+import { Globe, ArrowDownRight, X, CheckCircle2 } from "lucide-react";
 import { LIFI_CONFIG } from "@/config/contracts";
-
-type BridgeStatus = "idle" | "pending" | "success" | "error";
 
 export function CrossChainDeposit() {
   const { isConnected, address, chainId } = useAccount();
   const [isOpen, setIsOpen] = useState(false);
-  const [bridgeStatus, setBridgeStatus] = useState<BridgeStatus>("idle");
+  const [bridgeDone, setBridgeDone] = useState(false);
 
   const isOnCelo = chainId === 42220 || chainId === 11142220;
   const isMainnet = chainId === 42220;
@@ -35,7 +33,7 @@ export function CrossChainDeposit() {
         data-cross-chain-deposit
         onClick={() => {
           setIsOpen(true);
-          setBridgeStatus("idle");
+          setBridgeDone(false);
         }}
         className="flex w-full items-center justify-center gap-2 rounded-xl border border-accent/30 bg-accent-dim py-3 text-sm font-semibold text-accent transition-all hover:bg-accent/15 hover:border-accent/50 cursor-pointer"
       >
@@ -105,21 +103,12 @@ export function CrossChainDeposit() {
                     </div>
                   </div>
 
-                  {/* Bridge status from previous attempt */}
-                  {bridgeStatus === "success" && (
+                  {/* Manual bridge completion confirmation */}
+                  {bridgeDone && (
                     <div className="flex items-center gap-2 rounded-lg border border-accent/20 bg-accent-dim p-3">
                       <CheckCircle2 className="h-4 w-4 text-accent shrink-0" />
                       <p className="text-xs text-accent font-medium">
-                        Bridge complete! Now deposit your {isMainnet ? "cUSD" : "USDC"} on Celo using the deposit form above.
-                      </p>
-                    </div>
-                  )}
-
-                  {bridgeStatus === "error" && (
-                    <div className="flex items-center gap-2 rounded-lg border border-danger/20 bg-danger-dim p-3">
-                      <AlertCircle className="h-4 w-4 text-danger shrink-0" />
-                      <p className="text-xs text-danger font-medium">
-                        Bridge failed. Please try again.
+                        Great! Now deposit your {isMainnet ? "cUSD" : "USDC"} on Celo using the deposit form above.
                       </p>
                     </div>
                   )}
@@ -152,6 +141,15 @@ export function CrossChainDeposit() {
                     <ArrowDownRight className="h-4 w-4" />
                     Open Jumper (LI.FI) to Bridge
                   </a>
+
+                  {/* Manual confirmation */}
+                  <button
+                    onClick={() => setBridgeDone(true)}
+                    className="flex w-full items-center justify-center gap-2 rounded-lg border border-accent/30 bg-accent-dim py-2.5 text-xs font-semibold text-accent transition-all hover:bg-accent/15"
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    I&apos;ve Completed the Bridge
+                  </button>
 
                   {/* Fallback info */}
                   <p className="text-center text-[11px] text-muted">

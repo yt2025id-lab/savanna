@@ -6,7 +6,7 @@ import { x402Middleware } from "../x402-middleware.js";
 const router = Router();
 const mw = x402Middleware({
   usdcAddress: process.env.USDC_ADDRESS || "0xcebA9300f2b948710d2653dD7B07f33A8B32118C",
-  vaultAddress: process.env.VAULT_ADDRESS || "",
+  vaultAddress: process.env.VAULT_ADDRESS || "0xfDF9FBCcA4cAC29F0d793F4797cAC2F87dBD99Af",
   chainId: parseInt(process.env.CELO_CHAIN_ID || "42220", 10),
   priceUSDC: process.env.X402_PRICE_USDC || "100000",
   rpcUrl: process.env.CELO_RPC_URL || "https://forno.celo.org",

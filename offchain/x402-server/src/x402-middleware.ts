@@ -20,6 +20,9 @@ interface PaymentRequirement {
 
 const ERC20_TRANSFER_TOPIC = ethers.id("Transfer(address,address,uint256)");
 
+const verifiedTxHashes = new Set<string>();
+const MAX_TX_AGE_MS = 10 * 60 * 1000;
+
 function build402Response(config: PaymentConfig): PaymentRequirement {
   return {
     error: "Payment Required",
@@ -99,6 +102,15 @@ export function x402Middleware(config: PaymentConfig) {
       return;
     }
 
+    // Replay protection: reject already-verified txHashes
+    if (verifiedTxHashes.has(txHash)) {
+      res.status(402).json({
+        ...build402Response(config),
+        error: "Payment already used — each transaction can only be used once",
+      });
+      return;
+    }
+
     const result = await verifyPaymentOnChain(txHash, payer, config);
 
     if (!result.valid) {
@@ -107,6 +119,13 @@ export function x402Middleware(config: PaymentConfig) {
         error: "Payment verification failed — no valid USDC transfer found",
       });
       return;
+    }
+
+    // Mark txHash as used (with periodic cleanup of old entries)
+    verifiedTxHashes.add(txHash);
+    if (verifiedTxHashes.size > 10000) {
+      const entries = [...verifiedTxHashes];
+      entries.slice(0, 5000).forEach((h) => verifiedTxHashes.delete(h));
     }
 
     (req as any).payment = { ...result, txHash, currency: config.usdcAddress };

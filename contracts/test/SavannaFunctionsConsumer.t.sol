@@ -372,7 +372,7 @@ contract SavannaFunctionsConsumerTest is Test {
         assertEq(consumer.x402PrePayTimeHorizon(prelimId), 30 days);
     }
 
-    function test_x402_confirmAndSendRequest_marksPaidBeforeDONSend() public {
+    function test_x402_confirmAndSendPaidRequest_success() public {
         vm.startPrank(owner);
         consumer.setX402Enabled(true);
         consumer.setX402PricePerRequest(100000);
@@ -389,14 +389,18 @@ contract SavannaFunctionsConsumerTest is Test {
         bytes32 prelimId = consumer.requestAIStrategyWithPayment(alice, 30 days);
 
         assertFalse(consumer.x402PrePaid(prelimId));
+        assertEq(consumer.x402PrePayUser(prelimId), alice);
 
+        // Single atomic confirm + send (DON send fails gracefully since router=0)
         vm.prank(owner);
-        consumer.confirmAndSendRequest(prelimId);
+        bytes32 requestId = consumer.confirmAndSendPaidRequest(prelimId);
 
-        assertTrue(consumer.x402PrePaid(prelimId));
+        assertTrue(consumer.x402PrePaid(prelimId)); // marked as paid even if send failed
+        assertEq(consumer.x402PrePayUser(prelimId), address(0)); // cleaned up
+        assertEq(requestId, bytes32(0)); // DON send failed (no router in unit test)
     }
 
-    function test_x402_confirmAndSendRequest_revertAlreadyConfirmed() public {
+    function test_x402_confirmAndSendPaidRequest_revertAlreadyConfirmed() public {
         vm.startPrank(owner);
         consumer.setX402Enabled(true);
         consumer.setX402PricePerRequest(100000);
@@ -411,18 +415,69 @@ contract SavannaFunctionsConsumerTest is Test {
         vm.startPrank(owner);
         bytes32 prelimId = consumer.requestAIStrategyWithPayment(alice, 30 days);
 
-        consumer.confirmAndSendRequest(prelimId);
+        consumer.confirmAndSendPaidRequest(prelimId);
 
         vm.expectRevert(Errors.Savanna__X402PaymentNotConfirmed.selector);
-        consumer.confirmAndSendRequest(prelimId);
+        consumer.confirmAndSendPaidRequest(prelimId);
         vm.stopPrank();
     }
 
-    function test_x402_confirmAndSendRequest_revertNotFound() public {
+    function test_x402_confirmAndSendPaidRequest_revertNotFound() public {
         bytes32 fakePrelimId = keccak256("fake");
         vm.prank(owner);
         vm.expectRevert(Errors.Savanna__X402PaymentNotConfirmed.selector);
-        consumer.confirmAndSendRequest(fakePrelimId);
+        consumer.confirmAndSendPaidRequest(fakePrelimId);
+    }
+
+    function test_x402_cancelPaidRequest_success() public {
+        vm.startPrank(owner);
+        consumer.setX402Enabled(true);
+        consumer.setX402PricePerRequest(100000);
+        vm.stopPrank();
+
+        vm.startPrank(alice);
+        usdc.approve(address(vault), 1000e6);
+        vault.deposit(1000e6, alice);
+        vault.requestStrategy(30 days);
+        vm.stopPrank();
+
+        bytes32 prelimId;
+        vm.prank(owner);
+        prelimId = consumer.requestAIStrategyWithPayment(alice, 30 days);
+
+        assertTrue(consumer.x402PrePayUser(prelimId) != address(0));
+
+        vm.prank(alice);
+        consumer.cancelPaidRequest(prelimId);
+
+        assertEq(consumer.x402PrePayUser(prelimId), address(0));
+        assertEq(consumer.x402PrePayTimeHorizon(prelimId), 0);
+        assertFalse(consumer.x402PrePaid(prelimId));
+    }
+
+    function test_x402_cancelPaidRequest_revertAlreadySent() public {
+        vm.startPrank(owner);
+        consumer.setX402Enabled(true);
+        consumer.setX402PricePerRequest(100000);
+        consumer.setX402Endpoint("http://localhost:4021/strategy-analysis");
+        vm.stopPrank();
+
+        vm.startPrank(alice);
+        usdc.approve(address(vault), 1000e6);
+        vault.deposit(1000e6, alice);
+        vault.requestStrategy(30 days);
+        vm.stopPrank();
+
+        bytes32 prelimId;
+        vm.prank(owner);
+        prelimId = consumer.requestAIStrategyWithPayment(alice, 30 days);
+
+        vm.prank(owner);
+        consumer.confirmAndSendPaidRequest(prelimId); // already sent
+
+        vm.prank(alice);
+        vm.expectRevert(abi.encodeWithSelector(Errors.Savanna__InvalidState.selector, "already sent"));
+        consumer.cancelPaidRequest(prelimId);
     }
 
     function test_x402_setEndpoint() public {

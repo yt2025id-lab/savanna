@@ -2,6 +2,8 @@
 
 import { useAccount } from "wagmi";
 import { useVaultData } from "@/hooks/useVaultData";
+import { useMemo } from "react";
+import { formatUnits } from "viem";
 import { Wallet, TrendingUp, DollarSign, PiggyBank, BarChart3 } from "lucide-react";
 
 export function StatsBar() {
@@ -21,9 +23,15 @@ export function StatsBar() {
 
   const balance = userVaultBalanceFormatted ?? "0.00";
 
-  // Estimate APY from total yield earned vs total deployed
-  // This is a simplified on-chain calculation
-  const currentAPY = "18.5";
+  // Compute APY from on-chain data: (totalYieldEarned / totalDeployed) * 100
+  const currentAPY = useMemo(() => {
+    if (!totalDeployed || totalDeployed === BigInt(0)) return "0.0";
+    if (!totalYieldEarned || totalYieldEarned === BigInt(0)) return "0.0";
+    const yieldNum = Number(formatUnits(totalYieldEarned, tokenDecimals));
+    const deployedNum = Number(formatUnits(totalDeployed, tokenDecimals));
+    if (deployedNum <= 0 || yieldNum <= 0) return "0.0";
+    return ((yieldNum / deployedNum) * 100).toFixed(1);
+  }, [totalYieldEarned, totalDeployed, tokenDecimals]);
 
   // User earnings = current value - deposited amount
   const deposited = userPosition?.depositAmount;

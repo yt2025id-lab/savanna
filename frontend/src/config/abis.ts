@@ -95,8 +95,8 @@ export const SAVANNA_FUNCTIONS_CONSUMER_ABI = [
   { name: "totalResponsesReceived", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
   { name: "requestAIStrategy", type: "function", inputs: [{ type: "address", name: "user" }, { type: "uint256", name: "timeHorizon" }], outputs: [{ type: "bytes32", name: "requestId" }] },
   { name: "requestAIStrategyWithPayment", type: "function", inputs: [{ type: "address", name: "user" }, { type: "uint256", name: "timeHorizon" }], outputs: [{ type: "bytes32" }] },
-  { name: "confirmAndSendRequest", type: "function", inputs: [{ type: "bytes32", name: "prelimId" }], outputs: [] },
-  { name: "sendPaidRequest", type: "function", inputs: [{ type: "bytes32", name: "prelimId" }], outputs: [] },
+  { name: "confirmAndSendPaidRequest", type: "function", inputs: [{ type: "bytes32", name: "prelimId" }], outputs: [{ type: "bytes32", name: "requestId" }] },
+  { name: "cancelPaidRequest", type: "function", inputs: [{ type: "bytes32", name: "prelimId" }], outputs: [] },
   { name: "verifyX402Payment", type: "function", inputs: [{ type: "bytes32", name: "requestId" }], outputs: [] },
   { name: "setX402Endpoint", type: "function", inputs: [{ type: "string", name: "endpoint" }], outputs: [] },
   { name: "setX402PricePerRequest", type: "function", inputs: [{ type: "uint256", name: "price" }], outputs: [] },
@@ -109,6 +109,7 @@ export const SAVANNA_FUNCTIONS_CONSUMER_ABI = [
   { type: "event", name: "X402StatusUpdated", inputs: [{ type: "bool", name: "enabled" }] },
   { type: "event", name: "X402PaymentVerified", inputs: [{ type: "bytes32", name: "requestId", indexed: true }, { type: "address", name: "user", indexed: true }] },
   { type: "event", name: "X402PaymentRequested", inputs: [{ type: "bytes32", name: "requestId", indexed: true }, { type: "address", name: "user", indexed: true }, { type: "uint256", name: "price" }] },
+  { type: "event", name: "X402PrePayCancelled", inputs: [{ type: "bytes32", name: "prelimId", indexed: true }, { type: "address", name: "user", indexed: true }] },
 ] as const;
 
 export const SAVANNA_ORACLE_ABI = [

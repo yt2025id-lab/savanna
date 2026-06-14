@@ -25,8 +25,8 @@ export function Footer() {
             <Link href="/portfolio" className="text-xs text-muted hover:text-accent transition-colors">
               Portfolio
             </Link>
-            <Link href="/faucet" className="text-xs text-muted hover:text-accent transition-colors">
-              Faucet
+            <Link href="/ai" className="text-xs text-muted hover:text-accent transition-colors">
+              AI Agent
             </Link>
             <Link href="/ai" className="text-xs text-muted hover:text-accent transition-colors">
               AI

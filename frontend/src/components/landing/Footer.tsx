@@ -112,7 +112,7 @@ export function LandingFooter() {
               <Link href="/earn">Earn</Link>
               <Link href="/portfolio">Portfolio</Link>
               <Link href="/ai">AI Agent</Link>
-              <Link href="/faucet">Faucet</Link>
+              <a href="https://celoscan.io" target="_blank" rel="noopener noreferrer">Verified Contracts</a>
             </div>
             <div className="footer-col">
               <h4>Resources</h4>

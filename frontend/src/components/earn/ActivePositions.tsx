@@ -58,19 +58,21 @@ export function ActivePositions() {
   });
   const maxWithdraw = maxWithdrawRaw as bigint | undefined;
 
+  // Max amount (lower of maxWithdraw and sharesInAssets)
+  const maxAmt = maxWithdraw && sharesInAssets
+    ? (maxWithdraw < sharesInAssets ? maxWithdraw : sharesInAssets)
+    : (sharesInAssets ?? BigInt(0));
+
+  // Capture the chosen amount at strategy withdraw time to avoid race conditions
+  const pendingWithdrawAmount = useRef<bigint>(BigInt(0));
+
   // After strategy withdraw confirms, auto-trigger vault withdraw
   useEffect(() => {
     if (withdrawStrategySuccess && stepRef.current === "strategyWithdraw") {
       setStep("vaultWithdraw");
+      const chosen = pendingWithdrawAmount.current;
       const timer = setTimeout(() => {
-        if (!address || !sharesInAssets) return;
-        const amtStr = withdrawAmountRef.current;
-        const maxAmt = maxWithdraw && maxWithdraw < sharesInAssets ? maxWithdraw : sharesInAssets;
-        const chosen = amtStr && !isNaN(Number(amtStr)) && Number(amtStr) > 0
-          ? parseUnits(amtStr, tokenDecimals)
-          : maxAmt;
-        if (!chosen || chosen === BigInt(0)) return;
-        if (chosen > maxAmt) return;
+        if (!address || !sharesInAssets || !chosen || chosen === BigInt(0)) return;
         withdrawWrite(
           {
             address: contracts.vault,
@@ -88,7 +90,7 @@ export function ActivePositions() {
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [withdrawStrategySuccess, address, sharesInAssets, maxWithdraw, tokenDecimals, contracts, withdrawWrite]);
+  }, [withdrawStrategySuccess, address, sharesInAssets, tokenDecimals, contracts, withdrawWrite]);
 
   // After vault withdraw confirms
   useEffect(() => {
@@ -101,9 +103,6 @@ export function ActivePositions() {
 
   const handleWithdraw = useCallback(() => {
     if (!address) return;
-    const maxAmt = maxWithdraw && sharesInAssets
-      ? (maxWithdraw < sharesInAssets ? maxWithdraw : sharesInAssets)
-      : sharesInAssets;
     if (!maxAmt || maxAmt === BigInt(0)) return;
     const amtStr = withdrawAmountRef.current;
     const chosen = amtStr && !isNaN(Number(amtStr)) && Number(amtStr) > 0
@@ -127,12 +126,18 @@ export function ActivePositions() {
         },
       },
     );
-  }, [address, sharesInAssets, maxWithdraw, tokenDecimals, contracts, withdrawWrite]);
+  }, [address, maxAmt, tokenDecimals, contracts, withdrawWrite]);
 
   const handleWithdrawFromStrategy = useCallback(() => {
     if (!address) return;
     setErrorMsg("");
     setStep("strategyWithdraw");
+    // Capture the current max amount for post-strategy-withdraw vault withdraw
+    const amtStr = withdrawAmountRef.current;
+    const chosen = amtStr && !isNaN(Number(amtStr)) && Number(amtStr) > 0
+      ? parseUnits(amtStr, tokenDecimals)
+      : maxAmt;
+    pendingWithdrawAmount.current = chosen;
     withdrawStrategyWrite(
       {
         address: contracts.controller,
@@ -147,7 +152,7 @@ export function ActivePositions() {
         },
       },
     );
-  }, [address, contracts, withdrawStrategyWrite]);
+  }, [address, maxAmt, tokenDecimals, contracts, withdrawStrategyWrite]);
 
   const hasPosition = userShares && userShares > BigInt(0);
   const isActive = userPosition?.isActive;
@@ -244,16 +249,11 @@ export function ActivePositions() {
                     <label className="text-xs text-muted">Withdraw Amount</label>
                     <button
                       onClick={() => {
-                        const maxAmt = maxWithdraw && sharesInAssets
-                          ? (maxWithdraw < sharesInAssets ? maxWithdraw : sharesInAssets)
-                          : sharesInAssets;
                         if (maxAmt) setWithdrawAmount(formatUnits(maxAmt, tokenDecimals));
                       }}
                       className="text-xs text-accent hover:underline cursor-pointer"
                     >
-                      Max: {fmt(maxWithdraw && sharesInAssets
-                        ? (maxWithdraw < sharesInAssets ? maxWithdraw : sharesInAssets)
-                        : sharesInAssets)}
+                      Max: {fmt(maxAmt)}
                     </button>
                   </div>
                   <div className="relative">

@@ -6,6 +6,7 @@ import { ArrowDownToLine, ArrowUpFromLine, Zap, Clock, ExternalLink } from "luci
 import { clsx } from "clsx";
 import { SAVANNA_VAULT_ABI } from "@/config/abis";
 import { getContracts, getTxUrl } from "@/config/contracts";
+import { useVaultData } from "@/hooks/useVaultData";
 import { useEffect, useState } from "react";
 
 interface TxEntry {
@@ -24,6 +25,7 @@ export function TransactionHistory() {
   const contracts = getContracts(chainId);
   const publicClient = usePublicClient({ chainId });
   const vaultSymbol = isMainnet ? "cUSD" : "USDC";
+  const { tokenDecimals } = useVaultData();
   const [eventEntries, setEventEntries] = useState<TxEntry[]>([]);
 
   // Read user position
@@ -46,34 +48,15 @@ export function TransactionHistory() {
     return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()} ${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
   }
 
-  // Read vault asset decimals
-  const [tokenDecimals, setTokenDecimals] = useState(6);
-  useEffect(() => {
-    if (!publicClient || !contracts.vault) return;
-    const fetchDecimals = async () => {
-      try {
-        const asset = await publicClient.readContract({
-          address: contracts.vault,
-          abi: SAVANNA_VAULT_ABI,
-          functionName: "asset",
-        });
-        const decimals = await publicClient.readContract({
-          address: asset as `0x${string}`,
-          abi: [{ type: "function", name: "decimals", inputs: [], outputs: [{ type: "uint8" }] }],
-          functionName: "decimals",
-        });
-        setTokenDecimals(Number(decimals));
-      } catch { /* keep default 6 */ }
-    };
-    fetchDecimals();
-  }, [publicClient, contracts.vault]);
-
-  // Fetch on-chain events
+  // Fetch on-chain events from recent blocks only (last 100k blocks ~1 week)
   useEffect(() => {
     if (!address || !publicClient || !contracts.vault) return;
 
     const fetchEvents = async () => {
       try {
+        const latestBlock = await publicClient.getBlockNumber();
+        const fromBlock = latestBlock > BigInt(100000) ? latestBlock - BigInt(100000) : BigInt(0);
+
         const depositedLogs = await publicClient.getLogs({
           address: contracts.vault,
           event: {
@@ -86,7 +69,7 @@ export function TransactionHistory() {
             ],
           },
           args: { user: address },
-          fromBlock: BigInt(0),
+          fromBlock,
           toBlock: "latest",
         });
 
@@ -102,7 +85,7 @@ export function TransactionHistory() {
             ],
           },
           args: { user: address },
-          fromBlock: BigInt(0),
+          fromBlock,
           toBlock: "latest",
         });
 
@@ -119,7 +102,7 @@ export function TransactionHistory() {
             ],
           },
           args: { user: address },
-          fromBlock: BigInt(0),
+          fromBlock,
           toBlock: "latest",
         });
 

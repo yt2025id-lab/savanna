@@ -1000,3 +1000,37 @@ body, main, section, .hero, .hero-content { visibility: visible !important; }
     transform: none !important;
   }
 }
+
+/* ==================== LANDING: Live Stats Banner ==================== */
+.live-stat {
+  transition: all 0.3s ease;
+}
+.live-stat:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(200, 168, 75, 0.08);
+}
+
+/* ==================== LANDING: FAQ ==================== */
+.faq-item-wrap {
+  transition: background 0.2s ease;
+}
+.faq-item-wrap:hover {
+  background: rgba(200, 168, 75, 0.03);
+}
+
+/* ==================== LANDING: Trust Badges ==================== */
+.badge-item {
+  transition: all 0.3s ease;
+}
+
+@media (max-width: 640px) {
+  .badge-item { padding: 0.75rem; }
+}
+
+/* ==================== LANDING: Page Sections ==================== */
+.section-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(200, 168, 75, 0.15), transparent);
+  position: relative;
+  z-index: 2;
+}

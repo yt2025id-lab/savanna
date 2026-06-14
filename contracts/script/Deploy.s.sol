@@ -17,6 +17,7 @@ import {ReserveStrategy} from "../src/strategies/ReserveStrategy.sol";
 import {DataTypes} from "../src/libraries/DataTypes.sol";
 import {SavannaAgentIdentity} from "../src/agent/SavannaAgentIdentity.sol";
 import {SavannaFaucet} from "../src/faucet/SavannaFaucet.sol";
+import {SavannaFunctionsConsumer} from "../src/functions/SavannaFunctionsConsumer.sol";
 
 /// @title Deploy
 /// @notice Deploy script for Savanna Finance on Celo Sepolia (testnet) and Mainnet
@@ -271,6 +272,39 @@ contract Deploy is Script {
             faucet.addToken(asset, 100 * 1e6, 24 hours); // 100 USDC per claim, 24h cooldown
             console2.log("=> Faucet funded with 1M USDC, 100 USDC/claim");
         }
+
+        // ============ 12. Deploy Chainlink Functions Consumer ============
+
+        // Chainlink Functions Router (source: https://docs.chain.link/functions/supported-networks)
+        address functionsRouter = isMainnet
+            ? 0x65E5f4E5fe0c4Dea7E55BcDf6cb2B1Fd9d2DC1E0  // Celo Mainnet Functions Router
+            : 0xE953a9eF35E6B85E9bcD2baE0Fa770145AA16272; // Celo Sepolia Functions Router
+
+        bytes32 functionsDonId;
+        if (isMainnet) {
+            functionsDonId = 0x66756e2d63656c6f2d312e302e30000000000000000000000000000000000000;
+        } else {
+            functionsDonId = 0x66756e2d63656c6f2d746573746e65742d312e302e3000000000000000000000;
+        }
+
+        SavannaFunctionsConsumer functionsConsumer = new SavannaFunctionsConsumer(
+            functionsRouter,
+            deployed.controller,
+            deployed.vault,
+            0, // subscription ID — must be created via Chainlink Functions UI
+            functionsDonId,
+            deployer
+        );
+        address functionsConsumerAddr = address(functionsConsumer);
+        console2.log("12. SavannaFunctionsConsumer:", functionsConsumerAddr);
+
+        // Set Functions consumer as the controller's forwarder
+        controller.setForwarder(functionsConsumerAddr);
+        console2.log("=> FunctionsConsumer set as controller forwarder");
+
+        // Note: source code and subscription must be set post-deploy:
+        //   functionsConsumer.setSourceCode(<source.js content>)
+        //   functionsConsumer.setSubscriptionId(<subscription ID from Chainlink UI>)
 
         vm.stopBroadcast();
 

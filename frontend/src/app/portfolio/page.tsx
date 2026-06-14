@@ -1,10 +1,11 @@
 "use client";
 
-import { useAccount, useBalance, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { useAccount, useBalance, useWriteContract, useWaitForTransactionReceipt, useReadContract } from "wagmi";
 import { formatUnits } from "viem";
 import { useVaultData } from "@/hooks/useVaultData";
+import { useProtocolName } from "@/hooks/useProtocolName";
 import { getContracts, getAddressUrl } from "@/config/contracts";
-import { SAVANNA_CONTROLLER_ABI } from "@/config/abis";
+import { SAVANNA_CONTROLLER_ABI, SAVANNA_ORACLE_ABI } from "@/config/abis";
 import { useState, useCallback, useEffect } from "react";
 import {
   Wallet,
@@ -23,14 +24,7 @@ import {
 import clsx from "clsx";
 import { useAuth } from "@/components/AuthModal";
 
-const CELO_PRICE_USD = 0.50;
-
-const PROTOCOL_NAMES: Record<string, string> = {
-  "0xf49c062ff27689845e1614d740a0636f2049ce9e": "Aave V3",
-  "0x14a25285ae30e45cf9ebc6179ba36353be980f7e": "Reserve",
-  "0xcbcec5a5c17797c601b1f747a3977423397c904e": "Moola",
-  "0xff8433711abd603b3c9a07cfa51a4b157ec300e9": "Reserve",
-};
+const CELO_ADDRESS = "0x471EcE3750Da237f93B8E339c536989b5e3e63EA";
 
 export default function PortfolioPage() {
   const { address, chainId } = useAccount();
@@ -53,6 +47,16 @@ export default function PortfolioPage() {
 
   const { data: celoBalance } = useBalance({ address, chainId: activeChainId });
 
+  // Read CELO price from on-chain oracle, fallback to 0.50
+  const { data: celoOraclePrice } = useReadContract({
+    address: contracts.oracle,
+    abi: SAVANNA_ORACLE_ABI,
+    functionName: "getAssetPrice",
+    args: [CELO_ADDRESS],
+    query: { enabled: !!contracts.oracle && contracts.oracle !== "0x0000000000000000000000000000000000000000" },
+  });
+  const CELO_PRICE_USD = celoOraclePrice ? Number(formatUnits(celoOraclePrice as bigint, 18)) : 0.50;
+
   const depositAmount = userPosition?.depositAmount as bigint | undefined;
   const allocatedAmount = userPosition?.allocatedAmount as bigint | undefined;
   const isActive = userPosition?.isActive as boolean | undefined;
@@ -73,9 +77,7 @@ export default function PortfolioPage() {
     ? Number(formatUnits(sharesInAssets, tokenDecimals)) - Number(formatUnits(depositAmount, tokenDecimals))
     : 0;
 
-  const protocolName = activeStrategy
-    ? PROTOCOL_NAMES[activeStrategy.toLowerCase()] ?? `${activeStrategy.slice(0, 6)}...`
-    : undefined;
+  const protocolName = useProtocolName(activeStrategy);
 
   // Withdraw from strategy
   const {
@@ -334,7 +336,13 @@ export default function PortfolioPage() {
                 {errorMsg && (
                   <div className="flex items-start gap-2 rounded-lg bg-danger-dim border border-danger/30 px-3 py-2">
                     <AlertTriangle className="h-4 w-4 text-danger mt-0.5 shrink-0" />
-                    <p className="text-xs text-danger">{errorMsg}</p>
+                    <p className="text-xs text-danger flex-1">{errorMsg}</p>
+                    <button
+                      onClick={() => setErrorMsg("")}
+                      className="text-danger/60 hover:text-danger shrink-0 text-xs"
+                    >
+                      Dismiss
+                    </button>
                   </div>
                 )}
               </div>

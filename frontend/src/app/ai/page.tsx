@@ -113,7 +113,9 @@ export default function AIPage() {
       });
 
       if (result) {
-        const mapped = result.allProtocols.map((p, i) => ({
+        const protocols = result.allProtocols ?? [];
+        const totalScore = protocols.reduce((sum, p) => sum + p.safetyScore, 0);
+        const mapped = protocols.map((p, i) => ({
           name: p.protocol === "Aave V3" ? "Aave V3 Lending" : p.protocol === "MentoSavings" ? "Mento Savings" : p.protocol === "Moola" ? "Moola Market Supply" : p.protocol === "Reserve" ? "Savanna Reserve" : p.protocol,
           protocol: p.protocol,
           apy: p.apy,
@@ -121,7 +123,7 @@ export default function AIPage() {
           tvl: "$--",
           confidence: p.safetyScore,
           chain: "Celo",
-          allocation: i === 0 ? Math.round(result.allocationBps / 100) : Math.round((10000 - result.allocationBps) / 200),
+          allocation: totalScore > 0 ? Math.round((p.safetyScore / totalScore) * 100) : 0,
           color: p.protocolId === 0 ? "#B6509E" : p.protocolId === 1 ? "#4A7C59" : p.protocolId === 2 ? "#fb6236" : "#C8A84B",
         }));
         setStrategies(mapped);
@@ -331,6 +333,20 @@ export default function AIPage() {
             </button>
           </div>
 
+          {/* Error / info display — always visible */}
+          {(error || x402Error) && (
+            <div className="rounded-xl border border-danger/20 bg-danger-dim/30 p-3 flex items-start gap-2 animate-fade-in">
+              <AlertTriangle className="h-3.5 w-3.5 text-danger shrink-0 mt-0.5" />
+              <div>
+                <p className="text-[10px] font-semibold text-foreground">Analysis Error</p>
+                <p className="text-[10px] text-muted leading-relaxed">{error || x402Error}</p>
+                <p className="text-[9px] text-muted mt-1">
+                  {(!error || error.includes("fetch")) ? "Ensure the x402 server is running at the configured endpoint." : "Check your wallet balance and network connection."}
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Strategy Results */}
           {showResults && strategies && (
             <div className="space-y-3 animate-fade-in">
@@ -418,7 +434,7 @@ export default function AIPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-[11px] font-semibold text-foreground">{p.name}</p>
-                    <p className="text-[9px] text-muted">{p.chain} · TVL {p.tvl}</p>
+                    <p className="text-[9px] text-muted">{p.chain} · TVL {p.tvl} (est.)</p>
                   </div>
                   <span className="rounded-full bg-[#22c55e]/10 px-2 py-0.5 text-[9px] font-bold text-[#22c55e]">Live</span>
                 </div>

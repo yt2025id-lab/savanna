@@ -67,11 +67,15 @@ contract SavannaVault is ERC4626, Ownable, ISavannaVault, ReentrancyGuard, Pausa
     uint256 public rebalanceInterval = 4 hours;
     /// @notice Number of users processed in last rebalance
     uint256 public lastRebalanceCount;
+    /// @notice Chainlink Automation registry (if set, only registry can call performUpkeep)
+    address public automationRegistry;
 
     // ============ Events ============
 
     event RebalanceTriggered(uint256 indexed timestamp, uint256 positionsProcessed);
+    event ControllerRebalance(DataTypes.Protocol bestProtocol, uint256 bestApy, uint256 totalPositions);
     event RebalanceIntervalUpdated(uint256 oldInterval, uint256 newInterval);
+    event AutomationRegistryUpdated(address indexed oldRegistry, address indexed newRegistry);
     event OracleUpdated(address indexed oldOracle, address indexed newOracle);
     event YieldEarned(address indexed user, int256 yieldAmount, uint256 returnedAmount, uint256 allocatedAmount);
     event MinipayMinDepositUpdated(uint256 oldMinDeposit, uint256 newMinDeposit);
@@ -132,6 +136,14 @@ contract SavannaVault is ERC4626, Ownable, ISavannaVault, ReentrancyGuard, Pausa
         uint256 oldInterval = rebalanceInterval;
         rebalanceInterval = interval;
         emit RebalanceIntervalUpdated(oldInterval, interval);
+    }
+
+    /// @notice Set the Chainlink Automation registry address (optional; if set, only registry can trigger upkeep)
+    /// @param registry The Automation registry contract address (zero address to disable restriction)
+    function setAutomationRegistry(address registry) external onlyOwner {
+        address oldRegistry = automationRegistry;
+        automationRegistry = registry;
+        emit AutomationRegistryUpdated(oldRegistry, registry);
     }
 
     /// @notice Update the minimum deposit amount
@@ -265,7 +277,7 @@ contract SavannaVault is ERC4626, Ownable, ISavannaVault, ReentrancyGuard, Pausa
         totalCrossChainDeposits++;
     }
 
-    /// @notice Override withdraw to handle active positions
+    /// @notice Override withdraw to handle active positions — allows partial withdraw of unallocated funds
     function withdraw(uint256 assets, address receiver, address owner)
         public
         override
@@ -273,10 +285,9 @@ contract SavannaVault is ERC4626, Ownable, ISavannaVault, ReentrancyGuard, Pausa
         whenNotPaused
         returns (uint256 shares)
     {
-        // Check if user has active position
-        DataTypes.UserPosition memory pos = _positions[owner];
-        if (pos.isActive) {
-            revert Errors.Savanna__NoActivePosition();
+        uint256 maxAssets = maxWithdraw(owner);
+        if (assets > maxAssets) {
+            revert ERC4626ExceededMaxWithdraw(owner, assets, maxAssets);
         }
 
         shares = super.withdraw(assets, receiver, owner);
@@ -294,9 +305,14 @@ contract SavannaVault is ERC4626, Ownable, ISavannaVault, ReentrancyGuard, Pausa
             );
         }
 
+        uint256 userBalance = convertToAssets(balanceOf(msg.sender));
+        if (userBalance < minDeposit) {
+            revert Errors.Savanna__InsufficientDeposit(userBalance, minDeposit);
+        }
+
         _activeRequests[msg.sender] = true;
         _positions[msg.sender] = DataTypes.UserPosition({
-            depositAmount: 0,
+            depositAmount: userBalance,
             timeHorizon: timeHorizon,
             depositTimestamp: block.timestamp,
             activeStrategy: address(0),
@@ -304,7 +320,7 @@ contract SavannaVault is ERC4626, Ownable, ISavannaVault, ReentrancyGuard, Pausa
             isActive: false
         });
 
-        emit StrategyRequested(msg.sender, 0, timeHorizon, block.timestamp);
+        emit StrategyRequested(msg.sender, userBalance, timeHorizon, block.timestamp);
         return true;
     }
 
@@ -324,7 +340,7 @@ contract SavannaVault is ERC4626, Ownable, ISavannaVault, ReentrancyGuard, Pausa
         return true;
     }
 
-    /// @notice Override redeem with pause check
+    /// @notice Override redeem with pause check — allows partial redeem of unallocated funds
     function redeem(uint256 shares, address receiver, address owner)
         public
         override
@@ -332,9 +348,9 @@ contract SavannaVault is ERC4626, Ownable, ISavannaVault, ReentrancyGuard, Pausa
         whenNotPaused
         returns (uint256 assets)
     {
-        DataTypes.UserPosition memory pos = _positions[owner];
-        if (pos.isActive) {
-            revert Errors.Savanna__NoActivePosition();
+        uint256 maxRedeemable = maxRedeem(owner);
+        if (shares > maxRedeemable) {
+            revert ERC4626ExceededMaxRedeem(owner, shares, maxRedeemable);
         }
 
         assets = super.redeem(shares, receiver, owner);
@@ -466,7 +482,7 @@ contract SavannaVault is ERC4626, Ownable, ISavannaVault, ReentrancyGuard, Pausa
 
     /// @notice Emergency withdraw from a strategy (owner only)
     /// @param user The user whose strategy to complete
-    function emergencyCompleteStrategy(address user) external onlyOwner {
+    function emergencyCompleteStrategy(address user) external onlyOwner nonReentrant {
         DataTypes.UserPosition storage pos = _positions[user];
         if (!pos.isActive) revert Errors.Savanna__NoActivePosition();
         if (pos.activeStrategy == address(0)) revert Errors.Savanna__NoActivePosition();
@@ -529,24 +545,36 @@ contract SavannaVault is ERC4626, Ownable, ISavannaVault, ReentrancyGuard, Pausa
         return type(uint256).max;
     }
 
-    /// @notice Get max withdrawable assets — limited by vault's idle balance if no active strategy
+    /// @notice Get max withdrawable assets — limited by idle balance; if active position, only unallocated portion
     function maxWithdraw(address owner) public view override returns (uint256) {
         if (paused()) return 0;
         uint256 userAssets = convertToAssets(balanceOf(owner));
         DataTypes.UserPosition memory pos = _positions[owner];
-        if (pos.isActive) return userAssets;
+        uint256 withdrawable;
+        if (pos.isActive) {
+            // Only unallocated portion (user total - allocated) can be withdrawn
+            withdrawable = userAssets > pos.allocatedAmount ? userAssets - pos.allocatedAmount : 0;
+        } else {
+            withdrawable = userAssets;
+        }
         uint256 idleBalance = IERC20(asset()).balanceOf(address(this));
-        return userAssets > idleBalance ? idleBalance : userAssets;
+        return withdrawable > idleBalance ? idleBalance : withdrawable;
     }
 
-    /// @notice Get max redeemable shares — limited by vault's idle balance if no active strategy
+    /// @notice Get max redeemable shares — limited by idle balance; if active position, only unallocated portion
     function maxRedeem(address owner) public view override returns (uint256) {
         if (paused()) return 0;
         uint256 userShares = balanceOf(owner);
         DataTypes.UserPosition memory pos = _positions[owner];
-        if (pos.isActive) return userShares;
         uint256 idleBalance = IERC20(asset()).balanceOf(address(this));
         uint256 maxSharesFromIdle = convertToShares(idleBalance);
+        if (pos.isActive) {
+            uint256 userAssets = convertToAssets(userShares);
+            uint256 unallocatedAssets = userAssets > pos.allocatedAmount ? userAssets - pos.allocatedAmount : 0;
+            uint256 unallocatedShares = convertToShares(unallocatedAssets);
+            uint256 maxRedeemable = unallocatedShares > maxSharesFromIdle ? maxSharesFromIdle : unallocatedShares;
+            return userShares > maxRedeemable ? maxRedeemable : userShares;
+        }
         return userShares > maxSharesFromIdle ? maxSharesFromIdle : userShares;
     }
 
@@ -565,10 +593,13 @@ contract SavannaVault is ERC4626, Ownable, ISavannaVault, ReentrancyGuard, Pausa
         performData = "";
     }
 
-    /// @notice Execute rebalance — triggered by Chainlink Automation
-    /// @dev Re-validates the condition since anyone can call this
+    /// @notice Execute rebalance — triggered by Chainlink Automation or anyone outside the interval
+    /// @dev If automationRegistry is set, only that registry can call; otherwise anyone can call
     /// @param performData Encoded data from checkUpkeep (unused for time-based)
     function performUpkeep(bytes calldata performData) external nonReentrant {
+        if (automationRegistry != address(0) && msg.sender != automationRegistry) {
+            revert Errors.Savanna__Unauthorized();
+        }
         require(
             (block.timestamp - lastRebalance) > rebalanceInterval,
             "Too early for rebalance"
@@ -611,19 +642,21 @@ contract SavannaVault is ERC4626, Ownable, ISavannaVault, ReentrancyGuard, Pausa
     // ============ Internal ============
 
     /// @dev Internal rebalance logic — signals controller to re-evaluate strategies
-    ///      Controller (AI agent) decides which positions need rebalancing
+    ///      Controller scans all registered strategies, finds the highest APY,
+    ///      and returns the best protocol. Vault emits this for off-chain AI agents.
     function _rebalance(bytes memory) internal {
         if (controller == address(0)) {
             lastRebalanceCount = 0;
             return;
         }
 
-        // Signal controller that a rebalance cycle is due
-        // Controller evaluates all active positions and triggers re-allocation if needed
-        try ISavannaController(controller).rebalance() {
+        try ISavannaController(controller).rebalance() returns (
+            DataTypes.Protocol bestProtocol,
+            uint256 bestApy
+        ) {
             lastRebalanceCount = totalPositions;
+            emit ControllerRebalance(bestProtocol, bestApy, totalPositions);
         } catch {
-            // If controller rebalance fails, don't block future upkeep
             lastRebalanceCount = 0;
         }
     }

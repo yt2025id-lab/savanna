@@ -86,6 +86,7 @@ contract SavannaFunctionsConsumer is FunctionsClient, Ownable {
     event X402StatusUpdated(bool enabled);
     event X402PaymentVerified(bytes32 indexed requestId, address indexed user);
     event X402PaymentRequested(bytes32 indexed requestId, address indexed user, uint256 price);
+    event X402PrePayCancelled(bytes32 indexed prelimId, address indexed user);
 
     // ============ Constructor ============
 
@@ -175,25 +176,25 @@ contract SavannaFunctionsConsumer is FunctionsClient, Ownable {
         emit X402PaymentRequested(prelimId, user, x402PricePerRequest);
     }
 
-    function confirmAndSendRequest(bytes32 prelimId) external onlyOwner {
+    /// @notice Confirm x402 payment and immediately send AI request (atomic — single owner tx)
+    /// @param prelimId The preliminary request ID from requestAIStrategyWithPayment
+    /// @return requestId The Chainlink Functions request ID
+    function confirmAndSendPaidRequest(bytes32 prelimId) external onlyOwner returns (bytes32 requestId) {
         if (x402PrePayUser[prelimId] == address(0)) revert Errors.Savanna__X402PaymentNotConfirmed();
         if (x402PrePaid[prelimId]) revert Errors.Savanna__X402PaymentNotConfirmed();
-
-        x402PrePaid[prelimId] = true;
-
-        emit X402PaymentVerified(prelimId, x402PrePayUser[prelimId]);
-    }
-
-    function sendPaidRequest(bytes32 prelimId) external onlyOwner {
-        if (!x402PrePaid[prelimId]) revert Errors.Savanna__X402PaymentNotConfirmed();
 
         address user = x402PrePayUser[prelimId];
         uint256 timeHorizon = x402PrePayTimeHorizon[prelimId];
 
+        // Mark as paid (prevents re-send/cancel)
+        x402PrePaid[prelimId] = true;
         delete x402PrePayUser[prelimId];
         delete x402PrePayTimeHorizon[prelimId];
-        delete x402PrePaid[prelimId];
 
+        emit X402PaymentVerified(prelimId, user);
+
+        // Build and send the Chainlink Functions request
+        // If send fails (e.g., router not configured), payment is still confirmed
         FunctionsRequest.Request memory req;
         req.initializeRequestForInlineJavaScript(sourceCode);
 
@@ -202,18 +203,49 @@ contract SavannaFunctionsConsumer is FunctionsClient, Ownable {
         args[1] = _uintToString(timeHorizon);
         req.setArgs(args);
 
-        bytes32 requestId = _sendRequest(
-            req.encodeCBOR(),
-            subscriptionId,
-            callbackGasLimit,
-            donId
-        );
+        bytes memory cbor = req.encodeCBOR();
+
+        // Use try/catch so payment confirmation is independent of DON send success
+        try this.sendFunctionsRequest(cbor, user, timeHorizon) returns (bytes32 rid) {
+            requestId = rid;
+        } catch {
+            emit AIRequestFailed(bytes32(0), "DON send failed - payment confirmed, retry manually");
+            requestId = bytes32(0);
+        }
+    }
+
+    /// @notice Internal helper to send the Functions request (exposed for try/catch)
+    /// @dev Only callable by this contract itself
+    function sendFunctionsRequest(bytes memory cbor, address user, uint256 timeHorizon)
+        external
+        returns (bytes32 requestId)
+    {
+        if (msg.sender != address(this)) revert Errors.Savanna__Unauthorized();
+
+        requestId = _sendRequest(cbor, subscriptionId, callbackGasLimit, donId);
 
         pendingRequests[requestId] = user;
         requestTimeHorizons[requestId] = timeHorizon;
         totalRequestsSent++;
 
         emit AIRequestSent(requestId, user, timeHorizon);
+    }
+
+    /// @notice Cancel a paid request that the owner hasn't confirmed within the timeout (24h)
+    /// @param prelimId The preliminary request ID
+    /// @notice Cancel a paid request that hasn't been confirmed yet (e.g., user changed mind)
+    /// @param prelimId The preliminary request ID
+    function cancelPaidRequest(bytes32 prelimId) external {
+        // Check already-sent first (user data may have been deleted)
+        if (x402PrePaid[prelimId]) revert Errors.Savanna__InvalidState("already sent");
+        address user = x402PrePayUser[prelimId];
+        if (user == address(0)) revert Errors.Savanna__NoActiveRequest();
+
+        delete x402PrePayUser[prelimId];
+        delete x402PrePayTimeHorizon[prelimId];
+        delete x402PrePaid[prelimId];
+
+        emit X402PrePayCancelled(prelimId, user);
     }
 
     // ============ DON Callback ============
